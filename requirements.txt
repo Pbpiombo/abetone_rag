@@ -1,0 +1,13 @@
+langchain-core>=1.5,<2.0
+langchain-anthropic>=1.5,<2.0
+python-dotenv>=1.0
+
+langchain-text-splitters>=1.0,<2.0
+langchain-chroma>=1.0,<2.0
+
+langchain-huggingface
+chromadb>=1.0
+pypdf>=5.0
+sentence-transformers>=3.0
+
+rank-bm25

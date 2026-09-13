@@ -1,0 +1,32 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Percorso assoluto della cartella radice del progetto
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
+# Legge il file .env e rende disponibili le variabili al programma
+load_dotenv(ROOT_DIR / ".env")
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+if not ANTHROPIC_API_KEY:
+    raise RuntimeError(
+        "ANTHROPIC_API_KEY non trovata. Controlla che il file .env "
+        "esista nella radice del progetto."
+    )
+
+MODEL_NAME = os.getenv("MODEL_NAME", "claude-sonnet-5")
+
+# --- Percorsi dei dati ---
+DATA_DIR = ROOT_DIR / "data"
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+CHROMA_DIR = DATA_DIR / "db" / "chroma"
+SQLITE_PATH = DATA_DIR / "db" / "comune.sqlite"
+
+# --- Parametri di ingestione ---
+EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+COLLECTION_NAME = "abetone_documenti"
+
+CHUNK_SIZE = 1500
+CHUNK_OVERLAP = 250
