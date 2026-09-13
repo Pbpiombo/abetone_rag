@@ -82,6 +82,18 @@ CASI = [
         "risposta": "Non trovo la risposta nei documenti disponibili.",
         "atteso": {"verificato": 0, "non_trovato": 0, "non_citato": 0},
     },
+        {
+        "nome": "dato numerico corretto",
+        "risposta": "Il comune ha 1834 abitanti (fonte: [D1], ISTAT).",
+        "dati": [("popolazione_ultima", type("R", (), {"testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.", "fonti": ["ISTAT"]})())],
+        "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
+    },
+    {
+        "nome": "dato numerico ALTERATO",
+        "risposta": "Il comune ha 1900 abitanti (fonte: [D1], ISTAT).",
+        "dati": [("popolazione_ultima", type("R", (), {"testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.", "fonti": ["ISTAT"]})())],
+        "atteso": {"verificato": 0, "non_trovato": 1, "non_citato": 0},
+    },
 ]
 
 
@@ -96,7 +108,7 @@ def main() -> None:
     passati = 0
 
     for caso in CASI:
-        esiti = verifica(caso["risposta"], FRAMMENTI)
+        esiti = verifica(caso["risposta"], FRAMMENTI, caso.get("dati"))
         ottenuto = conta(esiti)
         ok = ottenuto == caso["atteso"]
         passati += ok

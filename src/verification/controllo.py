@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from langchain_core.documents import Document
 
 # Quanti caratteri dopo un dato cercare la sua citazione
-FINESTRA_CITAZIONE = 300
+FINESTRA_CITAZIONE = 600
 
 # Il blocco di citazione: (fonte: [2], Ente, Atto n. X del gg/mm/aaaa, pag. N)
 SCHEMA_CITAZIONE = r"\(\s*fonte:.*?\)"
@@ -38,6 +38,16 @@ SCHEMI = {
         r"\bart\.?\s*(\d+(?:\s*,\s*comma\s*\d+)?)",
         r"\b(\d{1,4}/\d{4})\b",
     ],
+    "periodo": [
+        r"\b(19\d{2}|20\d{2})\s*[-–/]\s*(?:19\d{2}|20\d{2})\b",
+    ],
+    "anno": [
+        r"(?<![\d.,/-])(19\d{2}|20\d{2})(?![\d.,/-])",
+    ],
+        "quantita": [
+        r"\b(\d{1,3}(?:\.\d{3})+)\b",
+        r"\b(\d{2,})\b",
+    ],
 }
 
 @dataclass
@@ -45,7 +55,7 @@ class Esito:
     """Il risultato della verifica di un singolo dato."""
     tipo: str
     valore: str
-    frammenti: list[int]
+    frammenti: list[str]
     stato: str          # verificato | non_trovato | non_citato
     dettaglio: str = ""
 
@@ -53,12 +63,14 @@ class Esito:
 def normalizza(testo: str) -> str:
     """Riduce il testo a una forma confrontabile.
 
-    Toglie spazi e separatori delle migliaia, cosi' che
-    '€ 19.570,00' e '19570,00' risultino uguali.
+    Toglie spazi, elimina i separatori delle migliaia e uniforma il
+    separatore decimale, cosi' che '€ 19.570,00', '19570.00' e
+    '19570,00' risultino uguali, e '9.2%' corrisponda a '9,2%'.
     """
     testo = testo.lower().replace("\u00a0", " ")
     testo = re.sub(r"\s+", "", testo)
-    testo = re.sub(r"(?<=\d)\.(?=\d)", "", testo)
+    testo = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", testo)
+    testo = re.sub(r"(?<=\d)[.,](?=\d)", ".", testo)
     return testo
 
 def maschera_citazioni(risposta: str) -> str:
@@ -73,13 +85,16 @@ def maschera_citazioni(risposta: str) -> str:
 
     return re.sub(SCHEMA_CITAZIONE, a_spazi, risposta, flags=re.DOTALL | re.IGNORECASE)
 
-def trova_citazioni(risposta: str) -> list[tuple[int, int]]:
-    """Restituisce coppie (posizione nel testo, numero del frammento)."""
-    return [
-        (m.start(), int(m.group(1)))
-        for m in re.finditer(r"fonte:\s*\[(\d+)\]", risposta, re.IGNORECASE)
-    ]
+def trova_citazioni(risposta: str) -> list[tuple[int, str]]:
+    """Restituisce coppie (posizione, etichetta del frammento).
 
+    L'etichetta e' '3' per un frammento documentale, 'D1' per un dato
+    numerico proveniente dall'archivio statistico.
+    """
+    return [
+        (m.start(), m.group(1).upper())
+        for m in re.finditer(r"fonte:\s*\[(D?\d+)\]", risposta, re.IGNORECASE)
+    ]
 
 def trova_dati(risposta: str) -> list[tuple[str, str, int]]:
     """Restituisce terne (tipo, valore, posizione) di ogni dato citabile.
@@ -106,47 +121,72 @@ def trova_dati(risposta: str) -> list[tuple[str, str, int]]:
     return sorted(trovati, key=lambda t: t[2])
 
 def frammenti_citati(
-    posizione: int, citazioni: list[tuple[int, int]]
-) -> list[int]:
-    """I frammenti citati subito dopo un dato."""
+    posizione: int, citazioni: list[tuple[int, str]]
+) -> list[str]:
+    """I frammenti citati dopo un dato, entro il paragrafo.
+
+    Restituisce le citazioni fino alla successiva, cosi' un dato seguito
+    da altro testo prima della fonte viene comunque associato.
+    """
+    successive = [c for c in citazioni if c[0] > posizione]
+
+    if not successive:
+        return []
+
+    prima = successive[0][0]
+
+    if prima - posizione > FINESTRA_CITAZIONE:
+        return []
+
     return [
-        numero
-        for pos, numero in citazioni
-        if posizione < pos <= posizione + FINESTRA_CITAZIONE
+        etichetta
+        for pos, etichetta in successive
+        if pos <= prima + 200
     ]
 
 
-def verifica(risposta: str, documenti: list[Document]) -> list[Esito]:
-    """Controlla che ogni dato della risposta esista nel frammento citato."""
+def verifica(
+    risposta: str,
+    documenti: list[Document],
+    esiti_dati: list | None = None,
+) -> list[Esito]:
+    """Controlla che ogni dato della risposta esista nella fonte citata.
+
+    I frammenti documentali sono etichettati '1', '2', ...; i dati
+    numerici dell'archivio statistico 'D1', 'D2', ...
+    """
     testi = {
-        numero: normalizza(doc.page_content)
+        str(numero): normalizza(doc.page_content)
         for numero, doc in enumerate(documenti, start=1)
     }
+
+    for numero, (_, risultato) in enumerate(esiti_dati or [], start=1):
+        testi[f"D{numero}"] = normalizza(risultato.testo)
 
     citazioni = trova_citazioni(risposta)
     mascherata = maschera_citazioni(risposta)
     esiti = []
 
     for tipo, valore, posizione in trova_dati(mascherata):
-        numeri = frammenti_citati(posizione, citazioni)
+        etichette = frammenti_citati(posizione, citazioni)
 
-        if not numeri:
+        if not etichette:
             esiti.append(Esito(tipo, valore, [], "non_citato"))
             continue
 
         ago = normalizza(valore)
-        dentro = [n for n in numeri if n in testi and ago in testi[n]]
+        dentro = [e for e in etichette if e in testi and ago in testi[e]]
 
         if dentro:
             esiti.append(Esito(tipo, valore, dentro, "verificato"))
         else:
-            altrove = [n for n, t in testi.items() if ago in t]
+            altrove = [e for e, t in testi.items() if ago in t]
             dettaglio = (
-                f"presente invece nei frammenti {altrove}"
+                f"presente invece in {altrove}"
                 if altrove
-                else "non presente in nessun frammento recuperato"
+                else "non presente in nessuna fonte recuperata"
             )
-            esiti.append(Esito(tipo, valore, numeri, "non_trovato", dettaglio))
+            esiti.append(Esito(tipo, valore, etichette, "non_trovato", dettaglio))
 
     return esiti
 

@@ -1,4 +1,4 @@
-"""STEP 3 - risposta con verifica automatica dei dati citati."""
+"""STEP 3+4 - risposta con routing, dati numerici e verifica automatica."""
 
 import sys
 
@@ -13,10 +13,9 @@ SIMBOLI = {
 
 DOMANDE = [
     "Qual è il costo massimo giornaliero per un incarico professionale?",
-    "Qual è il costo totale del progetto Ludoteche di montagna?",
-    "Entro quando va presentata la relazione annuale sullo stato di "
-    "avanzamento della Strategia d'area?",
     "Quanti abitanti ha il Comune di Abetone Cutigliano?",
+    "Il calo demografico giustifica la richiesta di fondi per le aree interne?",
+    "Qual è il bilancio comunale del 2025?",
 ]
 
 
@@ -25,10 +24,24 @@ def mostra(esito_catena: dict) -> None:
     print(f">>> {esito_catena['domanda']}")
     print("=" * 74)
 
+    decisione = esito_catena["decisione"]
+    nomi = [i.get("nome") for i in decisione.get("interrogazioni", [])]
+
+    print(f"\nROUTER  documenti: {decisione['documenti']}  "
+          f"interrogazioni: {nomi or 'nessuna'}")
+    print(f"        frammenti recuperati: {len(esito_catena['documenti'])}")
+
+    if "errore" in decisione:
+        print(f"        ANOMALIA: {decisione['errore']}")
+
     print("\nRISPOSTA")
     print(esito_catena["risposta"])
 
-    esiti = verifica(esito_catena["risposta"], esito_catena["documenti"])
+    esiti = verifica(
+    esito_catena["risposta"],
+    esito_catena["documenti"],
+    esito_catena.get("esiti_dati"),
+    )
 
     print("\nVERIFICA DEI DATI CITATI")
 
@@ -37,6 +50,9 @@ def mostra(esito_catena: dict) -> None:
         return
 
     for e in esiti:
+        if e.tipo == "anno" and e.stato == "verificato":
+            continue
+
         riga = f"  {SIMBOLI[e.stato]}{e.tipo:12} {e.valore:28}"
         if e.frammenti:
             riga += f" frammenti {e.frammenti}"

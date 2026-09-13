@@ -1,4 +1,4 @@
-"""Chain RAG con citazione obbligatoria delle fonti."""
+"""Chain RAG con citazione obbligatoria delle fonti e dati numerici."""
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.documents import Document
@@ -8,6 +8,12 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 from src.config import MODEL_NAME
 from src.retrieval import RecuperoIbrido
+from src.chains.router import (
+    costruisci_router,
+    decidi,
+    esegui_interrogazioni,
+    formatta_dati,
+)
 
 K_DEFAULT = 10
 
@@ -15,14 +21,16 @@ ISTRUZIONI = """Sei un assistente tecnico per la programmazione territoriale \
 di piccoli comuni montani italiani. Rispondi in italiano.
 
 REGOLA FONDAMENTALE
-Usi esclusivamente i FRAMMENTI forniti qui sotto. Non usi conoscenze tue, \
-non completi con ciò che ti sembra plausibile, non deduci.
+Usi esclusivamente i FRAMMENTI e i DATI forniti qui sotto. Non usi \
+conoscenze tue, non completi con ciò che ti sembra plausibile, non deduci.
 
 CITAZIONE OBBLIGATORIA
 Ogni importo, percentuale, data, scadenza, codice o riferimento normativo \
 che scrivi deve essere seguito dalla sua fonte, nella forma:
   (fonte: [numero del frammento], <ente>, <riferimento atto>, pag. <n>)
 Se un'affermazione non regge senza un dato che non puoi citare, non la scrivi.
+Usi sempre questa forma esatta, anche quando ripeti un dato già citato \
+in precedenza. Non abbreviare in "secondo [D1]" o simili.
 
 DIVIETO DI FUSIONE
 I frammenti provengono da documenti diversi. Non combini mai dati di \
@@ -38,8 +46,18 @@ GERARCHIA DELLE FONTI
 - studio: descrive e analizza, non stabilisce nulla
 Un dato tratto da uno studio non va mai presentato come una prescrizione.
 
+DATI NUMERICI CERTIFICATI
+Oltre ai frammenti, puoi ricevere DATI etichettati [D1], [D2] e così via. \
+Provengono da un archivio statistico interrogato con query verificate, \
+non da testo estratto. Sono affidabili e vanno citati nella forma:
+  (fonte: [D1], <fonte indicata>)
+Se un dato è dichiarato "valore calcolato", riportalo come tale.
+Se non ricevi alcun DATO, significa che la domanda non richiedeva \
+statistiche oppure che il dato non è in archivio: in quest'ultimo caso \
+dillo, invece di cercarlo nei frammenti testuali.
+
 QUANDO NON RISPONDERE
-Se i frammenti non contengono la risposta, scrivi esattamente:
+Se frammenti e dati non contengono la risposta, scrivi esattamente:
   "Non trovo la risposta nei documenti disponibili."
 seguito da una riga che indica cosa servirebbe per rispondere.
 Un frammento che parla di un argomento vicino ma non della cosa chiesta \
@@ -52,7 +70,10 @@ tema: quelli li ignori, senza citarli."""
 
 MODELLO_PROMPT = ChatPromptTemplate.from_messages([
     ("system", ISTRUZIONI),
-    ("human", "FRAMMENTI:\n\n{contesto}\n\n---\n\nDOMANDA: {domanda}"),
+    ("human",
+     "FRAMMENTI:\n\n{contesto}\n\n"
+     "DATI:\n\n{dati}\n\n"
+     "---\n\nDOMANDA: {domanda}"),
 ])
 
 
@@ -79,8 +100,9 @@ def formatta(documenti: list[Document]) -> str:
 
 
 def costruisci_catena(k: int = K_DEFAULT):
-    """Assembla la chain LCEL. Costruisce l'indice ibrido una volta sola."""
+    """Assembla la chain LCEL: router, recupero ibrido, generazione."""
     recupero = RecuperoIbrido()
+    router = costruisci_router()
 
     modello = ChatAnthropic(
         model=MODEL_NAME,
@@ -89,15 +111,29 @@ def costruisci_catena(k: int = K_DEFAULT):
     )
 
     def prepara(domanda: str) -> dict:
-        risultati = recupero.cerca(domanda, k=k)
-        documenti = [doc for doc, _, _ in risultati]
-        origini = [orig for _, _, orig in risultati]
+        decisione = decidi(router, domanda)
+
+        esiti = esegui_interrogazioni(decisione)
+        dati = formatta_dati(esiti) or "(nessun dato numerico richiesto)"
+
+        if decisione.get("documenti", True):
+            risultati = recupero.cerca(domanda, k=k)
+            documenti = [doc for doc, _, _ in risultati]
+            origini = [orig for _, _, orig in risultati]
+        else:
+            documenti = []
+            origini = []
+
+        contesto = formatta(documenti) or "(nessun frammento documentale)"
 
         return {
             "domanda": domanda,
             "documenti": documenti,
             "origini": origini,
-            "contesto": formatta(documenti),
+            "decisione": decisione,
+            "esiti_dati": esiti,
+            "contesto": contesto,
+            "dati": dati,
         }
 
     return (
