@@ -79,8 +79,8 @@ def formatta(documenti: list[Document]) -> str:
 
 
 def costruisci_catena(k: int = K_DEFAULT):
-    """Assembla la chain LCEL. Apre il vector store una volta sola."""
-    store = apri_store()
+    """Assembla la chain LCEL. Costruisce l'indice ibrido una volta sola."""
+    recupero = RecuperoIbrido()
 
     modello = ChatAnthropic(
         model=MODEL_NAME,
@@ -89,10 +89,14 @@ def costruisci_catena(k: int = K_DEFAULT):
     )
 
     def prepara(domanda: str) -> dict:
-        documenti = store.similarity_search(domanda, k=k)
+        risultati = recupero.cerca(domanda, k=k)
+        documenti = [doc for doc, _, _ in risultati]
+        origini = [orig for _, _, orig in risultati]
+
         return {
             "domanda": domanda,
             "documenti": documenti,
+            "origini": origini,
             "contesto": formatta(documenti),
         }
 
