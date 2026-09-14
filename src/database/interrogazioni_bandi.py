@@ -6,6 +6,16 @@ from datetime import date
 from src.database.modelli import Risultato
 
 
+def euro(valore) -> str:
+    """Formatta un importo con il separatore di migliaia italiano.
+
+    Python usa la convenzione americana con la virgola; qui serve il punto.
+    """
+    if not valore:
+        return "?"
+    return f"{valore:,.0f}".replace(",", ".")
+
+
 def formatta_bando(riga, oggi: str) -> str:
     """Una riga di bando in forma leggibile."""
     pezzi = [f"«{riga['titolo']}» ({riga['ente']})"]
@@ -32,9 +42,10 @@ def formatta_bando(riga, oggi: str) -> str:
         pezzi.append(f"contributo fino al {riga['contributo_perc']:.0f}%")
 
     if riga["costo_min"] or riga["costo_max"]:
-        minimo = f"{riga['costo_min']:,.0f}" if riga["costo_min"] else "?"
-        massimo = f"{riga['costo_max']:,.0f}" if riga["costo_max"] else "?"
-        pezzi.append(f"progetto ammissibile da {minimo} a {massimo} euro")
+        pezzi.append(
+            f"progetto ammissibile da {euro(riga['costo_min'])} "
+            f"a {euro(riga['costo_max'])} euro"
+        )
 
     if riga["premialita"]:
         pezzi.append(f"premialità: {riga['premialita']}")
@@ -164,10 +175,15 @@ def dettaglio_bando(conn: sqlite3.Connection, id_bando: str) -> Risultato:
     oggi = date.today().isoformat()
     ammessi = "SÌ" if riga["ammette_comuni"] else "NO"
 
+    dotazione = (
+        f"{euro(riga['dotazione'])} euro"
+        if riga["dotazione"] else "non indicata"
+    )
+
     return Risultato(
         f"{formatta_bando(riga, oggi)} | "
         f"Comuni ammessi: {ammessi} | "
-        f"dotazione complessiva: {riga['dotazione']} | "
+        f"dotazione complessiva: {dotazione} | "
         f"atto: {riga['riferimento_atto']}",
         fonti=[fonte_bando(riga)],
     )

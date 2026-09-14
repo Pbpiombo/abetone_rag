@@ -131,6 +131,14 @@ CASI = [
         "risposta": "Scade il 2026-10-15 alle 12:00 (fonte: [1], Regione, pag. 11).",
         "atteso": {"verificato": 0, "non_trovato": 2, "non_citato": 0},
     },
+        {
+        "nome": "riferimento normativo CORRETTO ma assente dal frammento citato",
+        "risposta": (
+            "La dichiarazione è resa ai sensi del D.Lgs. 231/2007 "
+            "(fonte: [1], Regione, pag. 11)."
+        ),
+        "atteso": {"verificato": 0, "non_trovato": 1, "non_citato": 0},
+    },
 ]
 
 def conta(esiti) -> dict:

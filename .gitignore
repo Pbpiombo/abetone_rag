@@ -3,3 +3,4 @@
 __pycache__/
 data/db/
 data/raw/
+data/processed/pagina_*.txt
