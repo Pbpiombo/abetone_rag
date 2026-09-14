@@ -48,8 +48,14 @@ def pulisci(testo: str, intestazione: str | None = None) -> str:
     return testo.strip()
 
 def e_indice(testo: str, soglia: int = 5) -> bool:
-    """Riconosce le pagine di indice dai puntini di guida."""
-    return len(re.findall(r"\.{6,}", testo)) >= soglia
+    """Riconosce le pagine di indice dai puntini di guida seguiti dalla pagina.
+
+    I PDF usano punti ripetuti o il carattere di ellissi, a volte separati
+    da spazi. Il numero di pagina finale distingue un sommario da un modulo
+    da compilare, che contiene puntini analoghi ma senza numero.
+    """
+    schema = r"(?:[.\u2026]\s?){4,}\s*(?:pag\.?\s*)?\d{1,3}\b"
+    return len(re.findall(schema, testo, re.IGNORECASE)) >= soglia
 
 def spezza(
     pagine: list[Document],

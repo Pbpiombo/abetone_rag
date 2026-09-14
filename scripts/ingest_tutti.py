@@ -20,7 +20,7 @@ DOCUMENTI = [
     {
         "chiave": "Decreto n.9550",
         "intestazione": INTESTAZIONE_AVVISO,
-        "salta_pagine": [],
+        "salta_pagine": [2, 3],
         "metadati": {
             "titolo": (
                 "Avviso pubblico - Progetti di rafforzamento amministrativo "
@@ -37,6 +37,7 @@ DOCUMENTI = [
                 "Ore 12:00 del trentesimo giorno successivo alla pubblicazione "
                 "sul BURT: data assoluta non indicata nel documento"
             ),
+            "id_bando": "",
         },
     },
     {
@@ -56,6 +57,7 @@ DOCUMENTI = [
             "data_pubblicazione": "2025-03",
             "data_scadenza": "",
             "scadenza_note": "",
+            "id_bando": "",
         },
     },
     {
@@ -76,6 +78,7 @@ DOCUMENTI = [
             "data_pubblicazione": "2024-10",
             "data_scadenza": "",
             "scadenza_note": "",
+            "id_bando": "",
         },
     },
     {
@@ -98,6 +101,32 @@ DOCUMENTI = [
             "data_pubblicazione": "2026-09-02",
             "data_scadenza": "",
             "scadenza_note": "",
+            "id_bando": "",
+        },
+    },
+        {
+        "chiave": "13287",
+        "intestazione": None,
+        "salta_pagine": [],
+        "metadati": {
+            "titolo": (
+                "Avviso pubblico per manifestazione di interesse alla "
+                "presentazione di progetti di investimento per la concessione "
+                "di contributi a comuni su cui insistono mercati rionali"
+            ),
+            "tipo_documento": "avviso_pubblico",
+            "livello": "regionale",
+            "ente": "Regione Toscana",
+            "riferimento_atto": "Decreto dirigenziale n. 13287 del 10/06/2026",
+            "programma": "Contributi ai Comuni per i mercati rionali",
+            "data_pubblicazione": "2026-06-25",
+            "data_scadenza": "2026-09-15",
+            "scadenza_note": (
+                "Il testo riporta le ore 12:00 del 15/09/2026; la scadenza è "
+                "stata poi prorogata alle ore 12:00 del 15/10/2026 con decreto "
+                "20141 del 11/09/2026, non contenuto in questo documento"
+            ),
+            "id_bando": "mercati-rionali-2026",
         },
     },
 ]

@@ -196,12 +196,19 @@ def verifica(
             continue
 
         ago = normalizza(valore)
-        dentro = [e for e in etichette if e in testi and ago in testi[e]]
+        varianti = {ago, re.sub(r"\.00$", "", ago)}
+        dentro = [
+            e for e in etichette
+            if e in testi and any(v in testi[e] for v in varianti)
+        ]
 
         if dentro:
             esiti.append(Esito(tipo, valore, dentro, "verificato"))
         else:
-            altrove = [e for e, t in testi.items() if ago in t]
+            altrove = [
+                e for e, t in testi.items()
+                if any(v in t for v in varianti)
+            ]
             dettaglio = (
                 f"presente invece in {altrove}"
                 if altrove

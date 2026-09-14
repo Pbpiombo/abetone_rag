@@ -32,8 +32,14 @@ def formatta_bando(riga, oggi: str) -> str:
         pezzi.append(f"contributo fino al {riga['contributo_perc']:.0f}%")
 
     if riga["costo_min"] or riga["costo_max"]:
-        minimo = f"{riga['costo_min']:,.0f}".replace(",", ".") if riga["costo_min"] else "?"
-        massimo = f"{riga['costo_max']:,.0f}".replace(",", ".") if riga["costo_max"] else "?"
+        minimo = (
+            f"{riga['costo_min']:,.0f}".replace(",", ".")
+            if riga["costo_min"] else "?"
+        )
+        massimo = (
+            f"{riga['costo_max']:,.0f}".replace(",", ".")
+            if riga["costo_max"] else "?"
+        )
         pezzi.append(f"progetto ammissibile da {minimo} a {massimo} euro")
 
     if riga["premialita"]:
