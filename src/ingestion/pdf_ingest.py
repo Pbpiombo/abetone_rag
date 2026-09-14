@@ -8,7 +8,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP
+from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, SOGLIA_CHUNK
 from src.vectorstore import apri_store
 
 
@@ -96,6 +96,13 @@ def spezza(
     )
 
     chunk = splitter.split_documents(tenute)
+
+    prima = len(chunk)
+    chunk = [c for c in chunk if len(c.page_content.strip()) >= SOGLIA_CHUNK]
+
+    if prima != len(chunk):
+        print(f"  Chunk scartati perche' troppo corti: {prima - len(chunk)}")
+
     print(f"  Chunk prodotti: {len(chunk)}")
     return chunk
 

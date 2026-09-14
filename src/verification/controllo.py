@@ -8,8 +8,12 @@ from langchain_core.documents import Document
 # Quanti caratteri dopo un dato cercare la sua citazione
 FINESTRA_CITAZIONE = 600
 
-# Il blocco di citazione: (fonte: [2], Ente, Atto n. X del gg/mm/aaaa, pag. N)
-SCHEMA_CITAZIONE = r"\(\s*fonte:.*?\)"
+# Il blocco di citazione, che puo' contenere parentesi annidate:
+# (fonte: [2], Ente, Atto n. X del gg/mm/aaaa (nota), pag. N)
+SCHEMA_CITAZIONE = r"\(\s*fonte:(?:[^()]|\([^()]*\))*\)"
+
+# Un riferimento sciolto a un frammento: [3], [D1]
+SCHEMA_RIFERIMENTO = r"\[D?\d+\]"
 
 MESI = (
     "gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|"
@@ -36,19 +40,21 @@ SCHEMI = {
     "riferimento": [
         r"\bn\.?\s*(\d+/\d{4})\b",
         r"\bart\.?\s*(\d+(?:\s*,\s*comma\s*\d+)?)",
+        r"\b(?:par\.?|paragrafo|punto|lett\.?)\s*(\d+)\b",
         r"\b(\d{1,4}/\d{4})\b",
     ],
     "periodo": [
-        r"\b(19\d{2}|20\d{2})\s*[-–/]\s*(?:19\d{2}|20\d{2})\b",
+        r"\b(19\d{2}|20\d{2})\s*[-\u2013/]\s*(?:19\d{2}|20\d{2})\b",
     ],
     "anno": [
         r"(?<![\d.,/-])(19\d{2}|20\d{2})(?![\d.,/-])",
     ],
-        "quantita": [
+    "quantita": [
         r"\b(\d{1,3}(?:\.\d{3})+)\b",
         r"\b(\d{2,})\b",
     ],
 }
+
 
 @dataclass
 class Esito:
@@ -73,17 +79,21 @@ def normalizza(testo: str) -> str:
     testo = re.sub(r"(?<=\d)[.,](?=\d)", ".", testo)
     return testo
 
+
 def maschera_citazioni(risposta: str) -> str:
-    """Sostituisce il testo delle citazioni con spazi.
+    """Sostituisce citazioni e riferimenti ai frammenti con spazi.
 
     Conserva la lunghezza, cosi' le posizioni dei dati restano valide.
-    I riferimenti dentro una citazione sono metadati nostri, non dati
-    da verificare.
+    I numeri dentro una citazione sono metadati nostri, non dati da
+    verificare; i riferimenti sciolti come [10] non sono quantita'.
     """
     def a_spazi(m):
         return " " * len(m.group(0))
 
-    return re.sub(SCHEMA_CITAZIONE, a_spazi, risposta, flags=re.DOTALL | re.IGNORECASE)
+    risposta = re.sub(SCHEMA_CITAZIONE, a_spazi, risposta,
+                      flags=re.DOTALL | re.IGNORECASE)
+    return re.sub(SCHEMA_RIFERIMENTO, a_spazi, risposta)
+
 
 def trova_citazioni(risposta: str) -> list[tuple[int, str]]:
     """Restituisce coppie (posizione, etichetta del frammento).
@@ -95,6 +105,7 @@ def trova_citazioni(risposta: str) -> list[tuple[int, str]]:
         (m.start(), m.group(1).upper())
         for m in re.finditer(r"fonte:\s*\[(D?\d+)\]", risposta, re.IGNORECASE)
     ]
+
 
 def trova_dati(risposta: str) -> list[tuple[str, str, int]]:
     """Restituisce terne (tipo, valore, posizione) di ogni dato citabile.
@@ -120,12 +131,13 @@ def trova_dati(risposta: str) -> list[tuple[str, str, int]]:
 
     return sorted(trovati, key=lambda t: t[2])
 
+
 def frammenti_citati(
     posizione: int, citazioni: list[tuple[int, str]]
 ) -> list[str]:
     """I frammenti citati dopo un dato, entro il paragrafo.
 
-    Restituisce le citazioni fino alla successiva, cosi' un dato seguito
+    Restituisce il gruppo di citazioni piu' vicino, cosi' un dato seguito
     da altro testo prima della fonte viene comunque associato.
     """
     successive = [c for c in citazioni if c[0] > posizione]
@@ -189,6 +201,7 @@ def verifica(
             esiti.append(Esito(tipo, valore, etichette, "non_trovato", dettaglio))
 
     return esiti
+
 
 def riassumi(esiti: list[Esito]) -> dict:
     """Conta gli esiti per stato."""

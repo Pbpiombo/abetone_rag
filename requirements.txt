@@ -11,3 +11,4 @@ pypdf>=5.0
 sentence-transformers>=3.0
 
 rank-bm25
+streamlit>=1.40
