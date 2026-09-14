@@ -120,6 +120,17 @@ CASI = [
         ),
         "atteso": {"verificato": 1, "non_trovato": 1, "non_citato": 0},
     },
+        {
+        "nome": "separatore migliaia dentro una frase",
+        "risposta": "Il progetto va da 25.000 a 35.000 euro (fonte: [D1], Regione).",
+        "dati": [("bandi", type("R", (), {"testo": "progetto ammissibile da 25.000 a 35.000 euro", "fonti": ["Portale"]})())],
+        "atteso": {"verificato": 2, "non_trovato": 0, "non_citato": 0},
+    },
+    {
+        "nome": "data ISO e orario non sono quantita",
+        "risposta": "Scade il 2026-10-15 alle 12:00 (fonte: [1], Regione, pag. 11).",
+        "atteso": {"verificato": 0, "non_trovato": 2, "non_citato": 0},
+    },
 ]
 
 def conta(esiti) -> dict:

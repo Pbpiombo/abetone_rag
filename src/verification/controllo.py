@@ -35,6 +35,8 @@ SCHEMI = {
         r"\b(\d+(?:[.,]\d+)?)\s*(?:%|per\s*cento)",
     ],
     "data": [
+        r"\b(\d{4}-\d{2}-\d{2})\b",
+        r"\b(\d{1,2}:\d{2})\b",
         rf"\b(\d{{1,2}}\s+(?:{MESI})(?:\s+\d{{4}})?)\b",
         r"\b(\d{1,2}/\d{1,2}/\d{4})\b",
         r"\b(\d{1,2}-\d{1,2}-\d{4})\b",
@@ -76,15 +78,19 @@ class Esito:
 def normalizza(testo: str) -> str:
     """Riduce il testo a una forma confrontabile.
 
-    Toglie spazi, elimina i separatori delle migliaia e uniforma il
+    Toglie gli spazi, elimina i separatori delle migliaia e uniforma il
     separatore decimale, cosi' che '€ 19.570,00', '19570.00' e
     '19570,00' risultino uguali, e '9.2%' corrisponda a '9,2%'.
     """
     testo = testo.lower().replace("\u00a0", " ")
-    testo = re.sub(r"\s+", "", testo)
-    testo = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", testo)
+
+    # I separatori delle migliaia vanno tolti PRIMA di eliminare gli spazi:
+    # dopo, la sequenza '25.000 a' diventa '25.000a' e il confine di parola
+    # dopo le tre cifre non esiste piu'.
+    testo = re.sub(r"(?<=\d)\.(?=\d{3}(?!\d))", "", testo)
     testo = re.sub(r"(?<=\d)[.,](?=\d)", ".", testo)
-    return testo
+
+    return re.sub(r"\s+", "", testo)
 
 
 def maschera_citazioni(risposta: str) -> str:

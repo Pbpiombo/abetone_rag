@@ -12,6 +12,17 @@ CASI = [
     ("dato_territoriale", {"chiave": "superficie"}),
     ("dato_territoriale", {"chiave": "altitudine"}),
     ("densita_abitativa", {}),
+
+    ("bandi_aperti_per_comuni", {}),
+    ("bandi_in_scadenza", {}),
+    ("bandi_in_scadenza", {"giorni": 15}),
+    ("bandi_per_tema", {"tema": "commercio"}),
+    ("bandi_per_tema", {"tema": "formazione"}),
+    ("bandi_per_tema", {"tema": "agricoltura"}),
+    ("dettaglio_bando", {"id_bando": "mercati-rionali-2026"}),
+    ("dettaglio_bando", {"id_bando": "orientamento"}),
+    ("dettaglio_bando", {"id_bando": "inesistente"}),
+
     ("query_inesistente", {}),
 ]
 

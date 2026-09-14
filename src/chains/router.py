@@ -7,6 +7,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.config import MODEL_NAME
+from src.config import MODEL_NAME, PROFILO_ENTE
 from src.database.repertorio import descrivi_repertorio, esegui, stato_archivio
 
 ISTRUZIONI_ROUTER = """Devi decidere dove cercare la risposta a una domanda \
@@ -46,6 +47,13 @@ statistico sia le regole.
 Se nessuna interrogazione del repertorio è adatta, lascia la lista vuota: \
 NON inventare nomi di interrogazioni.
 
+PER CHI STAI CERCANDO
+{profilo}
+
+Quando la domanda riguarda opportunità di finanziamento, bandi aperti, \
+scadenze o ammissibilità, usa le interrogazioni sui bandi. Una domanda \
+come "possiamo partecipare a qualche bando?" richiede bandi_aperti_per_comuni.
+
 ESEMPI
 "Quanti abitanti ha il comune?"
 {{"documenti": false, "interrogazioni": [{{"nome": "popolazione_ultima", "parametri": {{}}}}]}}
@@ -80,6 +88,17 @@ def pulisci_json(testo: str) -> str:
         testo = "\n".join(righe)
     return testo.strip()
 
+def descrivi_profilo() -> str:
+    """Il profilo dell'ente in forma testuale, per il prompt."""
+    righe = []
+    for chiave, valore in PROFILO_ENTE.items():
+        if valore is None:
+            righe.append(f"- {chiave}: non verificato")
+        elif isinstance(valore, bool):
+            righe.append(f"- {chiave}: {'sì' if valore else 'no'}")
+        else:
+            righe.append(f"- {chiave}: {valore}")
+    return "\n".join(righe)
 
 def decidi(router, domanda: str) -> dict:
     """Restituisce la decisione, con un ripiego sicuro in caso di errore."""
@@ -87,6 +106,7 @@ def decidi(router, domanda: str) -> dict:
         "domanda": domanda,
         "repertorio": descrivi_repertorio(),
         "stato": stato_archivio(),
+        "profilo": descrivi_profilo(),
     })
 
     try:

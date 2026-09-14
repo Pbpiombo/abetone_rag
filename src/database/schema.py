@@ -40,6 +40,37 @@ CREATE TABLE IF NOT EXISTS territorio (
     unita       TEXT,
     fonte       TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS bandi (
+    id                  TEXT PRIMARY KEY,
+    titolo              TEXT NOT NULL,
+    ente                TEXT NOT NULL,
+    tema                TEXT,
+    programma           TEXT,
+
+    apertura            TEXT,
+    scadenza            TEXT,
+    scadenza_nota       TEXT,
+    a_sportello         INTEGER NOT NULL DEFAULT 0
+                        CHECK (a_sportello IN (0, 1)),
+
+    ammette_comuni      INTEGER NOT NULL
+                        CHECK (ammette_comuni IN (0, 1)),
+    beneficiari         TEXT NOT NULL,
+    territorio          TEXT,
+    premialita          TEXT,
+
+    costo_min           REAL,
+    costo_max           REAL,
+    contributo_perc     REAL,
+    contributo_min      REAL,
+    contributo_max      REAL,
+    dotazione           REAL,
+
+    url                 TEXT NOT NULL,
+    riferimento_atto    TEXT,
+    fonte               TEXT NOT NULL,
+    verificato_il       TEXT NOT NULL
+);
 """
 
 TABELLE_DA_CSV = {
@@ -47,6 +78,14 @@ TABELLE_DA_CSV = {
     "bilancio": ["anno", "tipo", "voce", "importo", "fonte"],
     "turismo": ["anno", "mese", "arrivi", "presenze", "fonte"],
     "territorio": ["chiave", "valore", "unita", "fonte"],
+        "bandi": [
+        "id", "titolo", "ente", "tema", "programma",
+        "apertura", "scadenza", "scadenza_nota", "a_sportello",
+        "ammette_comuni", "beneficiari", "territorio", "premialita",
+        "costo_min", "costo_max", "contributo_perc",
+        "contributo_min", "contributo_max", "dotazione",
+        "url", "riferimento_atto", "fonte", "verificato_il",
+    ],
 }
 
 
