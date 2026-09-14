@@ -94,8 +94,33 @@ CASI = [
         "dati": [("popolazione_ultima", type("R", (), {"testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.", "fonti": ["ISTAT"]})())],
         "atteso": {"verificato": 0, "non_trovato": 1, "non_citato": 0},
     },
+        {
+        "nome": "riferimento all'atto in prosa, non citazione",
+        "risposta": (
+            "Secondo il Decreto dirigenziale n. 9550 del 28/04/2026, "
+            "il costo è € 322,00 (fonte: [1], Regione, pag. 11)."
+        ),
+        "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
+    },
+    {
+        "nome": "citazione con testo prima di fonte",
+        "risposta": "Il costo è € 322,00 (nota, fonte: [1], Regione, pag. 11).",
+        "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
+    },
+    {
+        "nome": "importo con decimali non spezzato",
+        "risposta": "Il totale è 19.570,00 € (fonte: [2], Comune, pag. 14).",
+        "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
+    },
+        {
+        "nome": "importo tra nome atto e data NON deve sparire",
+        "risposta": (
+            "Il decreto prevede € 322,00 con scadenza il 28/04/2026 "
+            "(fonte: [1], Regione, pag. 11)."
+        ),
+        "atteso": {"verificato": 1, "non_trovato": 1, "non_citato": 0},
+    },
 ]
-
 
 def conta(esiti) -> dict:
     conteggio = {"verificato": 0, "non_trovato": 0, "non_citato": 0}

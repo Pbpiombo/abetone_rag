@@ -10,7 +10,12 @@ FINESTRA_CITAZIONE = 600
 
 # Il blocco di citazione, che puo' contenere parentesi annidate:
 # (fonte: [2], Ente, Atto n. X del gg/mm/aaaa (nota), pag. N)
-SCHEMA_CITAZIONE = r"\(\s*fonte:(?:[^()]|\([^()]*\))*\)"
+SCHEMA_CITAZIONE = r"\((?:[^()]|\([^()]*\))*fonte:(?:[^()]|\([^()]*\))*\)"
+SCHEMA_ATTO = (
+    r"(?:decreto|deliberazione|delibera|avviso)"
+    r"(?:\s+\w+|\s+n\.?|\s+del|\s+\d+|\s*,)*"
+    r"\s*\d{1,2}/\d{1,2}/\d{4}"
+)   
 
 # Un riferimento sciolto a un frammento: [3], [D1]
 SCHEMA_RIFERIMENTO = r"\[D?\d+\]"
@@ -22,6 +27,7 @@ MESI = (
 
 SCHEMI = {
     "importo": [
+        r"\b([\d.]+,\d{1,2})\s*€",
         r"€\s*([\d.]+(?:,\d{1,2})?)",
         r"\b([\d.]+,\d{2})\s*euro\b",
     ],
@@ -50,6 +56,7 @@ SCHEMI = {
         r"(?<![\d.,/-])(19\d{2}|20\d{2})(?![\d.,/-])",
     ],
     "quantita": [
+        r"\b(\d+,\d{1,2})\b",
         r"\b(\d{1,3}(?:\.\d{3})+)\b",
         r"\b(\d{2,})\b",
     ],
@@ -81,17 +88,13 @@ def normalizza(testo: str) -> str:
 
 
 def maschera_citazioni(risposta: str) -> str:
-    """Sostituisce citazioni e riferimenti ai frammenti con spazi.
-
-    Conserva la lunghezza, cosi' le posizioni dei dati restano valide.
-    I numeri dentro una citazione sono metadati nostri, non dati da
-    verificare; i riferimenti sciolti come [10] non sono quantita'.
-    """
+    """Sostituisce citazioni, riferimenti ad atti e rimandi ai frammenti."""
     def a_spazi(m):
         return " " * len(m.group(0))
 
     risposta = re.sub(SCHEMA_CITAZIONE, a_spazi, risposta,
                       flags=re.DOTALL | re.IGNORECASE)
+    risposta = re.sub(SCHEMA_ATTO, a_spazi, risposta, flags=re.IGNORECASE)
     return re.sub(SCHEMA_RIFERIMENTO, a_spazi, risposta)
 
 
