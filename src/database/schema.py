@@ -71,6 +71,12 @@ CREATE TABLE IF NOT EXISTS bandi (
     fonte               TEXT NOT NULL,
     verificato_il       TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS scansioni (
+    slug            TEXT PRIMARY KEY,
+    esito           TEXT NOT NULL CHECK (esito IN ('salvato', 'scartato', 'fallito')),
+    motivo          TEXT,
+    esaminato_il    TEXT NOT NULL
+);
 """
 
 TABELLE_DA_CSV = {

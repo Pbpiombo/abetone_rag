@@ -132,3 +132,13 @@ def salva_in_chroma(chunk: list[Document], fonte: str) -> Chroma:
     store.add_documents(documents=chunk, ids=identificatori)
     print(f"  Salvati {len(chunk)} chunk in {CHROMA_DIR}")
     return store
+
+def rimuovi_documento(fonte: str) -> int:
+    """Cancella dal vector store tutti i chunk di un documento."""
+    store = apri_store()
+    dati = store.get(where={"fonte": fonte})
+
+    if dati["ids"]:
+        store.delete(ids=dati["ids"])
+
+    return len(dati["ids"])

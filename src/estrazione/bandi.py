@@ -3,6 +3,8 @@
 import re
 import json
 from dataclasses import dataclass
+from datetime import date
+
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
@@ -235,3 +237,35 @@ def valida(campi: list[Campo]) -> tuple[dict, list[str]]:
         riga["a_sportello"] = 0
 
     return riga, problemi
+
+def decidi_automatico(campi: list[Campo], riga: dict) -> tuple[bool, str]:
+    """Decide se salvare senza conferma umana.
+
+    La soglia e' prudente: si salva solo quando i campi critici sono
+    espliciti e il bando risulta ancora aperto. In tutti gli altri casi
+    si scarta con il motivo, per una revisione successiva.
+    """
+    per_nome = {c.nome: c for c in campi}
+
+    if riga.get("ammette_comuni") != 1:
+        return False, "non ammette i Comuni"
+
+    ammette = per_nome.get("ammette_comuni")
+    if ammette and ammette.confidenza == "bassa":
+        return False, "ammette_comuni a bassa confidenza"
+
+    if riga.get("a_sportello") == 1:
+        return True, "a sportello"
+
+    scadenza = riga.get("scadenza")
+    if not scadenza:
+        return False, "scadenza non determinata"
+
+    if scadenza < date.today().isoformat():
+        return False, f"scaduto il {scadenza}"
+
+    campo_scadenza = per_nome.get("scadenza")
+    if campo_scadenza and campo_scadenza.confidenza == "bassa":
+        return False, f"scadenza {scadenza} a bassa confidenza"
+
+    return True, f"aperto fino al {scadenza}"

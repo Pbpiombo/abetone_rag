@@ -14,6 +14,7 @@ aggiornamento di uno gia' in archivio.
 Opzioni:
     --debug         stampa il JSON grezzo restituito dal modello
     --salva-testo   salva in data/processed il testo estratto dalla pagina
+    --auto          salva senza chiedere conferma, applicando la soglia
 """
 
 import sys
@@ -25,6 +26,7 @@ from src.estrazione.bandi import (
     estrai,
     da_rivedere,
     valida,
+    decidi_automatico,
 )
 from src.estrazione.pagina import prendi
 from src.estrazione.salva import esiste, salva
@@ -67,6 +69,10 @@ def mostra_confronto(precedente: dict, riga: dict) -> None:
     for nome, prima, dopo in cambiati:
         print(f"    {nome}: {prima}  ->  {dopo}")
 
+    perdite = [n for n, prima, dopo in cambiati if prima and not dopo]
+    if perdite:
+        print(f"  ATTENZIONE: salvando perderesti {', '.join(perdite)}")
+
 
 def conferma(domanda: str) -> bool:
     """Chiede conferma esplicita. Tutto cio' che non e' si vale no."""
@@ -74,48 +80,51 @@ def conferma(domanda: str) -> bool:
     return risposta in ("s", "si", "sì")
 
 
-def main() -> None:
+def leggi_argomenti() -> tuple[str, str, str] | None:
+    """Restituisce (testo, url, identificativo), oppure None se mancano."""
     argomenti = [a for a in sys.argv[1:] if not a.startswith("--")]
 
     if not argomenti:
-        print("Uso: python -m scripts.estrai_bando URL [identificativo]")
-        print("     python -m scripts.estrai_bando percorso/testo.txt URL "
-              "[identificativo]")
-        return
+        print("Uso: python -m scripts.estrai_bando URL identificativo")
+        print("     python -m scripts.estrai_bando testo.txt URL identificativo")
+        return None
 
-    # Se il primo argomento e' un URL, scarica; altrimenti legge il file
     if argomenti[0].startswith("http"):
         if len(argomenti) < 2:
             print("Serve l'identificativo del bando.")
-            print("Uso: python -m scripts.estrai_bando URL identificativo")
-            return
+            return None
 
-        url = argomenti[0]
-        id_bando = argomenti[1]
+        url, id_bando = argomenti[0], argomenti[1]
 
         print(f"Scarico: {url}")
         testo = prendi(url)
 
         if "--salva-testo" in sys.argv:
-            nome = PROCESSED_DIR / f"pagina_{id_bando}.txt"
-            nome.write_text(testo, encoding="utf-8")
-            print(f"Testo salvato in {nome}")
-    else:
-        if len(argomenti) < 3:
-            print("Uso: python -m scripts.estrai_bando percorso/testo.txt "
-                  "URL identificativo")
-            return
+            percorso = PROCESSED_DIR / f"pagina_{id_bando}.txt"
+            percorso.write_text(testo, encoding="utf-8")
+            print(f"Testo salvato in {percorso}")
 
-        percorso = Path(argomenti[0])
-        url = argomenti[1]
-        id_bando = argomenti[2]
+        return testo, url, id_bando
 
-        if not percorso.exists():
-            print(f"File non trovato: {percorso}")
-            return
+    if len(argomenti) < 3:
+        print("Uso: python -m scripts.estrai_bando testo.txt URL identificativo")
+        return None
 
-        testo = percorso.read_text(encoding="utf-8")
+    percorso = Path(argomenti[0])
 
+    if not percorso.exists():
+        print(f"File non trovato: {percorso}")
+        return None
+
+    return percorso.read_text(encoding="utf-8"), argomenti[1], argomenti[2]
+
+
+def main() -> None:
+    letti = leggi_argomenti()
+    if letti is None:
+        return
+
+    testo, url, id_bando = letti
     print(f"Testo utile: {len(testo)} caratteri\n")
 
     estrattore = costruisci_estrattore()
@@ -137,6 +146,16 @@ def main() -> None:
     print(f"\n{len(rivedere)} campi da confermare su {len(campi)}.")
 
     riga["id"] = id_bando
+
+    if "--auto" in sys.argv:
+        salvare, motivo = decidi_automatico(campi, riga)
+
+        if salvare:
+            salva(riga, url, FONTE)
+            print(f"\nSALVATO: {id_bando} ({motivo})")
+        else:
+            print(f"\nSCARTATO: {id_bando} ({motivo})")
+        return
 
     precedente = esiste(riga["id"])
     if precedente:
