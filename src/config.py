@@ -28,6 +28,8 @@ SQLITE_PATH = DATA_DIR / "db" / "comune.sqlite"
 EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 COLLECTION_NAME = "abetone_documenti"
 
+SOGLIA_PAGINA_MINIMA = 50  # Pagine con meno caratteri vengono scartate
+
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 250
 SOGLIA_CHUNK = 150

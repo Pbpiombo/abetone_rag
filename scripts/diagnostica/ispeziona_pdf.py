@@ -8,9 +8,10 @@ from src.ingestion.pdf_ingest import carica_pdf
 SOGLIA_PAGINA_VUOTA = 100
 
 
-def compatta(testo: str, quanti: int) -> str:
+def compatta(testo: str, caratteri_inclusi: int) -> str:
     """Riduce il testo a una riga sola, troncata."""
-    return " ".join(testo.split())[:quanti]
+    ridotto = " ".join(testo.split())
+    return ridotto[:caratteri_inclusi] + ("…" if len(ridotto) > caratteri_inclusi else "")
 
 
 def ispeziona(percorso: Path) -> None:
@@ -33,8 +34,8 @@ def ispeziona(percorso: Path) -> None:
     if media < 200:
         print("  >>> ATTENZIONE: pochissimo testo. Probabile scansione.")
 
-    quasi_vuote = [i + 1 for i, n in enumerate(lunghezze)
-                   if n < SOGLIA_PAGINA_VUOTA]
+    quasi_vuote = [pagina for pagina, caratteri in enumerate(lunghezze, start=1)
+                   if caratteri < SOGLIA_PAGINA_VUOTA]
     if quasi_vuote:
         print(f"  Pagine quasi vuote: {quasi_vuote}")
 

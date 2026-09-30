@@ -8,7 +8,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, SOGLIA_CHUNK
+from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, RAW_DIR, SOGLIA_CHUNK, SOGLIA_PAGINA_MINIMA
 from src.vectorstore import apri_store
 
 
@@ -20,14 +20,16 @@ def carica_pdf(percorso: Path) -> list[Document]:
     lettore = pypdf.PdfReader(str(percorso))
 
     pagine = []
-    for numero, pagina in enumerate(lettore.pages):
+    for numero, pagina in enumerate(lettore.pages, start=1):
         pagine.append(Document(
             page_content=pagina.extract_text() or "",
-            metadata={"source": str(percorso), "page": numero},
+            metadata={"source": str(percorso.relative_to(RAW_DIR)), "page": numero},
         ))
 
-    print(f"  Pagine lette: {len(pagine)}")
-    return pagine
+    if not any(p.page_content.strip() for p in pagine):
+        print(f"  ATTENZIONE: nessun testo estratto da {percorso.name}")
+    
+    return pagine   
 
 
 def pulisci(testo: str, intestazione: str | None = None) -> str:
@@ -42,7 +44,7 @@ def pulisci(testo: str, intestazione: str | None = None) -> str:
     testo = re.sub(r"[.\s]{6,}", " ", testo)
 
     if intestazione:
-        testo = re.sub(intestazione, " ", testo, flags=re.IGNORECASE)
+        testo = re.sub(re.escape(intestazione), " ", testo, flags=re.IGNORECASE)
 
     testo = re.sub(r"\n{3,}", "\n\n", testo)
     return testo.strip()
@@ -54,7 +56,7 @@ def e_indice(testo: str, soglia: int = 5) -> bool:
     da spazi. Il numero di pagina finale distingue un sommario da un modulo
     da compilare, che contiene puntini analoghi ma senza numero.
     """
-    schema = r"(?:[.\u2026]\s?){4,}\s*(?:pag\.?\s*)?\d{1,3}\b"
+    schema = r"(?:(?:\.\s?){4,}|(?:\u2026\s?){2,})\s*(?:pag\.?\s*)?\d{1,3}\b"
     return len(re.findall(schema, testo, re.IGNORECASE)) >= soglia
 
 def spezza(
@@ -67,7 +69,7 @@ def spezza(
 
     tenute = []
     for pagina in pagine:
-        numero = pagina.metadata.get("page", 0) + 1
+        numero = pagina.metadata["page"]
 
         if numero in salta_pagine:
             continue
@@ -76,11 +78,14 @@ def spezza(
             print(f"  Saltata pagina {numero}: indice")
             continue
 
-        pagina.page_content = pulisci(pagina.page_content, intestazione)
-        if len(pagina.page_content) < 50:
+        testo= pulisci(pagina.page_content, intestazione)
+
+        
+        if len(testo) < SOGLIA_PAGINA_MINIMA:
+            print(f"  Saltata pagina {numero}: troppo corta ({len(testo)} caratteri)")
             continue
 
-        tenute.append(pagina)
+        tenute.append(Document(page_content=testo, metadata=pagina.metadata))
 
     print(f"  Pagine tenute: {len(tenute)}")
 
@@ -103,11 +108,15 @@ def spezza(
 
     chunk = splitter.split_documents(tenute)
 
-    prima = len(chunk)
-    chunk = [c for c in chunk if len(c.page_content.strip()) >= SOGLIA_CHUNK]
+    tenuti = [c for c in chunk if len(c.page_content.strip()) >= SOGLIA_CHUNK]
+    scartati = [c for c in chunk if len(c.page_content.strip()) < SOGLIA_CHUNK]
 
-    if prima != len(chunk):
-        print(f"  Chunk scartati perche' troppo corti: {prima - len(chunk)}")
+    if scartati:
+        print(f"  Chunk scartati perche' troppo corti: {len(scartati)}")
+        for c in scartati[:10]:
+            print(f"  [{c.metadata['page']}] {c.page_content.strip()[:80]}")
+
+    chunk = tenuti
 
     print(f"  Chunk prodotti: {len(chunk)}")
     return chunk
