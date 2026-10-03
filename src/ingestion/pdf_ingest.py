@@ -38,16 +38,17 @@ def pulisci(testo: str, intestazione: str | None = None) -> str:
     testo = re.sub(r"[ \t]+", " ", testo)
 
     # Ricuce i numeri spezzati dall'estrazione: "41/202 2" -> "41/2022"
-    testo = re.sub(r"(?<=\d)\s+(?=\d)", "", testo)
-    testo = re.sub(r"(?<=\d)\s*([/.,])\s*(?=\d)", r"\1", testo)
+    testo = re.sub(r"(?<=\d)[ \t]+(?=\d)", "", testo)
+    testo = re.sub(r"(?<=\d)[ \t]*([/.,])[ \t]*(?=\d)", r"\1", testo)
 
-    testo = re.sub(r"[.\s]{6,}", " ", testo)
+    testo = re.sub(r"[ \t]*(?:\.[ \t]*){5,}", " ", testo)
 
     if intestazione:
-        testo = re.sub(re.escape(intestazione), " ", testo, flags=re.IGNORECASE)
+        testo = re.sub(intestazione, " ", testo, flags=re.IGNORECASE)
 
     testo = re.sub(r"\n{3,}", "\n\n", testo)
     return testo.strip()
+
 
 def e_indice(testo: str, soglia: int = 5) -> bool:
     """Riconosce le pagine di indice dai puntini di guida seguiti dalla pagina.
@@ -59,15 +60,18 @@ def e_indice(testo: str, soglia: int = 5) -> bool:
     schema = r"(?:(?:\.\s?){4,}|(?:\u2026\s?){2,})\s*(?:pag\.?\s*)?\d{1,3}\b"
     return len(re.findall(schema, testo, re.IGNORECASE)) >= soglia
 
+
 def spezza(
     pagine: list[Document],
     intestazione: str | None = None,
     salta_pagine: list[int] | None = None,
 ) -> list[Document]:
     """Divide le pagine in chunk, saltando quelle indicate."""
+
     salta_pagine = salta_pagine or []
 
     tenute = []
+
     for pagina in pagine:
         numero = pagina.metadata["page"]
 
@@ -123,15 +127,14 @@ def spezza(
 
 
 def applica_metadati(chunk: list[Document], metadati: dict) -> list[Document]:
-    """Aggiunge i metadati obbligatori a ogni chunk."""
-    for indice, pezzo in enumerate(chunk):
-        pagina = pezzo.metadata.get("page")
-        pezzo.metadata = {
-            **metadati,
-            "pagina": int(pagina) + 1 if pagina is not None else 0,
-            "chunk_num": indice,
-        }
-    return chunk
+    """Unisce i metadati forniti a quelli già presenti su ogni chunk."""
+    return [
+        Document(
+            page_content=pezzo.page_content,
+            metadata={**pezzo.metadata, **metadati, "chunk_num": indice},
+        )
+        for indice, pezzo in enumerate(chunk)
+    ]
 
 
 def salva_in_chroma(chunk: list[Document], fonte: str) -> Chroma:
@@ -141,6 +144,7 @@ def salva_in_chroma(chunk: list[Document], fonte: str) -> Chroma:
     store.add_documents(documents=chunk, ids=identificatori)
     print(f"  Salvati {len(chunk)} chunk in {CHROMA_DIR}")
     return store
+
 
 def rimuovi_documento(fonte: str) -> int:
     """Cancella dal vector store tutti i chunk di un documento."""

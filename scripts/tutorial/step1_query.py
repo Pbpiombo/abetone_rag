@@ -2,6 +2,7 @@
 
 from langchain_chroma import Chroma
 
+from scripts.diagnostica.ispeziona_pdf import compatta
 from src.vectorstore import apri_store
 
 DOMANDE = [
@@ -25,7 +26,7 @@ def ispeziona_chunk(store: Chroma, quanti: int = 5) -> None:
     for i in range(min(quanti, len(dati["ids"]))):
         testo = dati["documents"][i]
         meta = dati["metadatas"][i]
-        print(f"\n--- chunk {i} | pagina {meta.get('pagina')} "
+        print(f"\n--- chunk {i} | pagina {meta.get('page')} "
               f"| {len(testo)} caratteri ---")
         print(f"INIZIO: {testo[:120]}")
         print(f"FINE:   {testo[-120:]}")
@@ -44,11 +45,11 @@ def prova_retrieval(store: Chroma, k: int = 5) -> None:
         risultati = store.similarity_search_with_score(domanda, k=k)
 
         for posizione, (doc, distanza) in enumerate(risultati, start=1):
-            estratto = " ".join(doc.page_content.split())[:180]
+            estratto = compatta(doc.page_content,180)
             meta = doc.metadata
             print(f"  [{posizione}] {distanza:.3f} "
                   f"| {meta.get('ente')} ({meta.get('livello')}) "
-                  f"| p. {meta.get('pagina')}")
+                  f"| p. {meta.get('page')}")
             print(f"      {estratto}...")
 
 
