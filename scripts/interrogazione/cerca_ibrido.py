@@ -22,7 +22,7 @@ def main() -> None:
         testo = " ".join(doc.page_content.split())[:200]
         print(f"[{posizione}] rrf {punteggio:.4f} | {', '.join(origini)}")
         print(f"    {meta.get('ente')} | {meta.get('tipo_documento')} "
-              f"| p. {meta.get('pagina')}")
+              f"| p. {meta.get('page')}")
         print(f"    {testo}...\n")
 
 

@@ -86,7 +86,7 @@ def etichetta(documento: Document, numero: int) -> str:
         f"tipo: {meta.get('tipo_documento', '?')} | "
         f"livello: {meta.get('livello', '?')} | "
         f"atto: {meta.get('riferimento_atto') or meta.get('titolo', '?')} | "
-        f"pag. {meta.get('pagina', '?')}"
+        f"pag. {meta.get('page', '?')}"
     )
 
 

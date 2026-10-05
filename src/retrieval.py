@@ -89,7 +89,7 @@ class RecuperoIbrido:
         ordinati = sorted(
             punti.values(), key=lambda v: v["punteggio"], reverse=True
         )
-
+    
         return [
             (v["doc"], v["punteggio"], v["origini"]) for v in ordinati[:k]
         ]

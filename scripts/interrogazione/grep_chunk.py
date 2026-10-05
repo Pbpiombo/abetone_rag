@@ -23,7 +23,7 @@ def main() -> None:
             inizio = max(0, posizione - 120)
             fine = min(len(compatto), posizione + len(ago) + 120)
 
-            print(f"\n--- {meta.get('ente')} | p. {meta.get('pagina')} "
+            print(f"\n--- {meta.get('ente')} | p. {meta.get('page')} "
                   f"| chunk {meta.get('chunk_num')} ---")
             print(f"    ...{compatto[inizio:fine]}...")
 

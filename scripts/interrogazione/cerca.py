@@ -23,7 +23,7 @@ def main() -> None:
         meta = doc.metadata
         testo = " ".join(doc.page_content.split())[:200]
         print(f"[{posizione}] {distanza:.3f} | {meta.get('ente')} "
-              f"| {meta.get('tipo_documento')} | p. {meta.get('pagina')}")
+              f"| {meta.get('tipo_documento')} | p. {meta.get('page')}")
         print(f"    {testo}...\n")
 
 

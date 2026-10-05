@@ -106,7 +106,7 @@ def mostra_fonti(esito: dict) -> None:
             meta = doc.metadata
             intestazione = (
                 f"[{numero}]  {meta.get('ente')} · "
-                f"{meta.get('tipo_documento')} · pag. {meta.get('pagina')}"
+                f"{meta.get('tipo_documento')} · pag. {meta.get('page')}"
             )
 
             with st.expander(intestazione, expanded=False):
