@@ -99,9 +99,10 @@ def formatta(documenti: list[Document]) -> str:
     return "\n\n".join(blocchi)
 
 
-def costruisci_catena(k: int = K_DEFAULT):
+def costruisci_catena(k: int = K_DEFAULT, recupero=None):
     """Assembla la chain LCEL: router, recupero ibrido, generazione."""
-    recupero = RecuperoIbrido()
+    if recupero is None:
+        recupero= RecuperoIbrido()
     router = costruisci_router()
 
     modello = ChatAnthropic(

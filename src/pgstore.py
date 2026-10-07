@@ -2,6 +2,8 @@ import os
 import psycopg
 import numpy as np
 import json
+import re
+
 
 from pgvector.psycopg import register_vector
 from dotenv import load_dotenv
@@ -11,6 +13,7 @@ from langchain_core.documents import Document
 
 load_dotenv()
 
+COSTANTE_RRF = 60
 
 def salva_chunk_in_db(documenti: list[Document]) -> None:
     """Salva i chunk dei documenti nel database."""
@@ -38,18 +41,25 @@ def salva_chunk_in_db(documenti: list[Document]) -> None:
     except Exception as e:
         print("Errore durante la connessione a Supabase:", e)
 
+def a_or_query(domanda: str) -> str:
+    parole = re.findall(r"\w+", domanda.lower())
+    return " | ".join(parole)
 
-def cerca_chunk_in_db(domanda: str, k: int = 5) -> list[Document]:
-    """Cerca i chunk più simili alla domanda nel database."""
+class RecuperoPostgres:
+    """tiene in memoria l'indice lessicale e interroga entrambi i motori."""
 
-    with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
-        register_vector(conn)
-        cursor= conn.cursor()
-        emb= crea_embeddings()
+    def __init__(self) -> None:
+        self.emb= crea_embeddings()
+        self.conn= psycopg.connect(os.getenv("DATABASE_URL"))
+        register_vector(self.conn)
+        self.cursor= self.conn.cursor()
 
-        vettore_domanda= np.array(emb.embed_query(domanda))
 
-        cursor.execute(
+    def _densa(self, domanda: str, quanti: int) -> list[Document]:
+        """Restituisce i chunk più simili alla domanda nel database."""
+        vettore_domanda= np.array(self.emb.embed_query(domanda))
+
+        self.cursor.execute(
             """SELECT id,
                     testo, 
                     metadata, 
@@ -57,46 +67,85 @@ def cerca_chunk_in_db(domanda: str, k: int = 5) -> list[Document]:
             FROM chunk
             ORDER BY distanza
             LIMIT %s""",
-            (vettore_domanda, k)
+            (vettore_domanda, quanti)
         )
 
-        return [ Document(page_content= testo, metadata= metadata) for id, testo, metadata,distanza in cursor.fetchall()]
+        return [ Document(page_content= testo, metadata= {**metadata, "id": id}) for 
+        id, testo, metadata,distanza in self.cursor.fetchall()]
 
 
-def ricerca_lessicale_in_db(domanda: str, k: int = 5) -> list[Document]:
-    """Esegue una ricerca lessicale nel database utilizzando la ricerca full-text di PostgreSQL."""
+    def _lessicale(self, domanda:str, quanti: int) -> list[Document]:
+        """Restituisce i chunk più simili alla domanda nel database."""
 
-    with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
+        query= a_or_query(domanda)
 
-        cursor= conn.cursor()
-
-        cursor.execute(
+        self.cursor.execute(
             """SELECT id,
                     testo, 
-                    metadata,
-                    ts_rank(to_tsvector('italian',testo), plainto_tsquery('italian',%s)) AS punteggio 
+                    metadata, 
+                    ts_rank_cd(to_tsvector('italian', testo), to_tsquery('italian', %s)) AS rank
             FROM chunk
-            WHERE to_tsvector('italian',testo) @@ plainto_tsquery('italian', %s)
-            ORDER BY punteggio DESC
+            WHERE to_tsvector('italian', testo) @@ to_tsquery('italian', %s)
+            ORDER BY rank DESC
             LIMIT %s""",
-            (domanda, domanda, k)
+            (query, query, quanti)
         )
 
-        return [ Document(page_content= testo, metadata= metadata) for id, testo, metadata,punteggio in cursor.fetchall()]
+        return [ Document(page_content= testo, metadata= {**metadata, "id": id}) for 
+        id, testo, metadata, rank in self.cursor.fetchall()]
+
+
+    def cerca(self, domanda: str, k: int = 8, ampiezza: int = 20) -> list[tuple[Document,float,list[str]]]:
+        """Restituisce i k chunk migliori con punteggio RRF e provenienza."""
+        densa= self._densa(domanda, quanti= ampiezza)
+        lessicale= self._lessicale(domanda, quanti= ampiezza)
+
+        punti: dict= {}
+
+        for nome, elenco in (("densa", densa), ("lessicale", lessicale)):
+            for posizione, documento in enumerate(elenco, start=1):
+                chiave = documento.metadata["id"]
+
+                if chiave not in punti:
+                    punti[chiave]= {
+                        "doc": documento,
+                        "punteggio": 0.0,
+                        "origini": [],
+                    }
+
+                punti[chiave]["punteggio"] += 1 / (COSTANTE_RRF + posizione)
+                punti[chiave]["origini"].append(f"{nome} #{posizione}")
+
+        ordinati= sorted(
+            punti.values(), key=lambda v: v["punteggio"], reverse=True
+        )
+    
+        return [
+            (v["doc"], v["punteggio"], v["origini"]) for v in ordinati[:k]
+        ]
+
+
+    def chiudi(self) -> None:
+        """Chiude la connessione al database."""
+        self.conn.close()
 
 if __name__ == "__main__":
+    recupero = RecuperoPostgres()
 
-    prova = [ 
-        Document(page_content="La scadenza per abetone è prevista per il 31/10/2027", metadata={"source": "delibera.pdf", "page": 12, "livello": "regionale"}),
-        Document(page_content="Il contributo per asilo nido è di 500 euro", metadata={"source": "delibera.pdf", "page": 5, "livello": "comunale"}),
-        Document(page_content="Il bando per il comune di Pistoia è aperto fino al 15/09/2024", metadata={"source": "bando.pdf", "page": 3, "livello": "comunale"}),
-        Document(page_content="Ad Abetone a dicembre è prevista 20 cm di neve", metadata={"source": "previsioni_meteo.pdf", "page": 1, "livello": "regionale"})
+    domande = [
+        "Quante risorse sono destinate a ciascuna Area interna?",
+        "Entro quale data devono essere sostenute le spese?",
+        "Chi sono i soggetti che possono presentare domanda?",
+        "Quali enti sono beneficiari del sostegno?",
+        "Qual è il costo massimo giornaliero per un incarico professionale?",
+        "cosa dice l'art. 7 comma 6?",
     ]
-    #salva_chunk_in_db(prova)
-    #print ("Chunk prova salvati")
 
-    for doc in cerca_chunk_in_db("entro quando devo presentare?"):
-        print(doc.metadata.get("livello"), "|", doc.page_content[:60])
+    for domanda in domande:
+        print(f"\n>>> {domanda}")
+        for doc, punteggio, origini in recupero.cerca(domanda, k=5, ampiezza=20):
+            meta = doc.metadata
+            print(f"  {punteggio:.4f} | {meta.get('ente')} | p. {meta.get('page')} | {', '.join(origini)}")
+            print(f"      {doc.page_content[:100].strip()}")
 
-    for doc in ricerca_lessicale_in_db("scadenza Abetone"):
-        print(doc.metadata.get("livello"), "|", doc.page_content[:60])
+    recupero.chiudi()

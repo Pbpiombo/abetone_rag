@@ -7,6 +7,7 @@ from src.ingestion.pdf_ingest import (
     applica_metadati,
     salva_in_chroma,
 )
+from src.pgstore import salva_chunk_in_db
 
 INTESTAZIONE_AVVISO = (
     r"AVVISO PUBBLICO\s*"
@@ -164,11 +165,13 @@ def ingerisci(scheda: dict) -> bool:
     metadati["fonte"] = percorso.name
 
     chunk = applica_metadati(chunk, metadati)
-    salva_in_chroma(chunk, fonte=percorso.name)
+    #salva_in_chroma(chunk, fonte=percorso.name)
+    salva_chunk_in_db(chunk)
     return True
 
 
 def main() -> None:
+
     print(f"Documenti da ingerire: {len(DOCUMENTI)}")
 
     riusciti = sum(ingerisci(scheda) for scheda in DOCUMENTI)

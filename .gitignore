@@ -5,3 +5,5 @@ chroma_db/
 data/db/
 data/raw/
 data/processed/pagina_*.txt
+supabase_conn.py
+prove.py
