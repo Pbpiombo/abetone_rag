@@ -43,8 +43,8 @@ Il sistema tiene due archivi separati, e un router decide quale interrogare.
 
 | Archivio | Contiene | Risponde a |
 |---|---|---|
-| Vector store (Chroma) | Testo dei documenti, diviso in chunk | "Cosa dice questo bando?" |
-| Database (SQLite) | Bandi, demografia, dati territoriali | "Quali bandi posso usare?" |
+| Vector store | Testo dei documenti, diviso in chunk | "Cosa dice questo bando?" |
+| Database relazionale | Bandi, demografia, dati territoriali | "Quali bandi posso usare?" |
 
 I dati numerici **non** stanno nel vector store: una ricerca semantica su una
 tabella può restituire il valore vicino a quello giusto, e il modello lo
@@ -52,9 +52,25 @@ presenterebbe come corretto. Una query SQL o restituisce il valore esatto o non
 restituisce niente.
 
 Il recupero documentale è **ibrido**: somiglianza semantica (embedding
-multilingua, in locale) unita a corrispondenza lessicale esatta (BM25), con
-fusione RRF. Serve perché la ricerca densa non sa agganciare codici e
-riferimenti normativi come `41/2022` o un CUP.
+multilingua, in locale) unita a corrispondenza lessicale esatta, con fusione
+RRF. Serve perché la ricerca densa non sa agganciare codici e riferimenti
+normativi come `41/2022` o un CUP.
+
+### Due implementazioni del recupero
+
+Il vector store esiste in due versioni intercambiabili, che espongono la stessa
+interfaccia:
+
+| | `RecuperoIbrido` | `RecuperoPostgres` |
+|---|---|---|
+| Vettori | Chroma, su disco | Postgres + pgvector |
+| Ricerca lessicale | BM25 in memoria | full-text italiano di Postgres |
+| Dove gira | in locale | Postgres gestito (Supabase) |
+
+`costruisci_catena()` usa Chroma per impostazione predefinita; passando
+`recupero=RecuperoPostgres()` si ottiene la versione su Postgres senza toccare
+nient'altro della catena. Le risposte delle due versioni sono state confrontate
+sulle stesse domande e coincidono nei dati citati.
 
 ---
 
@@ -78,16 +94,51 @@ Crea un file `.env` nella radice:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 MODEL_NAME=claude-sonnet-5
+DATABASE_URL=postgresql://postgres.<progetto>:<password>@<host>.pooler.supabase.com:5432/postgres
 ```
 
-La chiave si ottiene su [console.anthropic.com](https://console.anthropic.com).
+La chiave API si ottiene su [console.anthropic.com](https://console.anthropic.com).
 Conviene impostare un limite di spesa nella sezione Billing.
+
+`DATABASE_URL` serve solo per la versione su Postgres: con Chroma si può
+omettere.
 
 Crea le cartelle dei dati, che non sono nel repository:
 
 ```bash
 mkdir -p data/raw data/db
 ```
+
+### Postgres con pgvector (opzionale)
+
+Serve un Postgres raggiungibile con l'estensione `vector` attiva. La via più
+breve è un progetto su [Supabase](https://supabase.com), dove l'estensione è già
+disponibile.
+
+Nell'editor SQL del pannello:
+
+```sql
+create extension if not exists vector;
+
+CREATE TABLE chunk (
+    id bigserial PRIMARY KEY,
+    testo text NOT NULL,
+    metadata jsonb,
+    embedding vector(384)
+);
+
+alter table chunk enable row level security;
+
+CREATE INDEX ON chunk USING hnsw (embedding vector_cosine_ops);
+```
+
+Il `384` è la dimensione dei vettori prodotti dal modello di embedding
+configurato: cambiando modello va cambiata anche qui, e l'indice va ricostruito.
+
+Nota sulla stringa di connessione: su reti senza IPv6 la connessione diretta
+`db.<progetto>.supabase.co` non si risolve. Va usata quella del **connection
+pooler**, che contiene `pooler.supabase.com` e ha l'utente nella forma
+`postgres.<idprogetto>`.
 
 ## I documenti
 
@@ -106,7 +157,8 @@ deve rispondere. Quelli usati nello sviluppo:
 Requisito: PDF **testuali**, non scansioni. Il sistema lo verifica in fase di
 ispezione.
 
-I metadati di ogni documento si dichiarano in `scripts/ingest_tutti.py`.
+I metadati di ogni documento si dichiarano in
+`scripts/ingestione/ingest_tutti.py`.
 
 ---
 
@@ -115,18 +167,26 @@ I metadati di ogni documento si dichiarano in `scripts/ingest_tutti.py`.
 ### Ingestione dei documenti
 
 ```bash
-python -m scripts.ispeziona_pdf      # pagine, densità di testo, indici
-python -m scripts.ingest_tutti       # estrae, pulisce, divide, indicizza
+python -m scripts.diagnostica.ispeziona_pdf     # pagine, densità di testo, indici
+python -m scripts.ingestione.ingest_tutti       # estrae, pulisce, divide, indicizza
 ```
 
-Il primo avvio scarica il modello di embedding (circa mezzo giga) e lo tiene in
-cache.
+L'ingestione scrive su entrambi i vector store. Il primo avvio scarica il
+modello di embedding (circa mezzo giga) e lo tiene in cache.
+
+Reindicizzando, Chroma sovrascrive i chunk esistenti perché usa identificativi
+deterministici; la tabella `chunk` su Postgres no, perché gli id sono generati
+da `bigserial`. Prima di una reindicizzazione completa va svuotata:
+
+```sql
+TRUNCATE chunk RESTART IDENTITY;
+```
 
 ### Dati numerici e catalogo dei bandi
 
 ```bash
-python -m scripts.step4_crea_db      # crea le tabelle e carica i CSV
-python -m scripts.db_mostra          # ispeziona il contenuto
+python -m scripts.tutorial.step4_crea_db        # crea le tabelle e carica i CSV
+python -m scripts.interrogazione.db_mostra      # ispeziona il contenuto
 ```
 
 I CSV in `data/processed/` sono versionati: contengono dati pubblici verificati
@@ -136,13 +196,13 @@ a mano, con la fonte e la data di verifica per ogni riga.
 
 ```bash
 # scopre quali bandi sono comparsi sul portale
-python -m scripts.scopri_bandi --promettenti
+python -m scripts.ingestione.scopri_bandi --promettenti
 
 # estrae un singolo bando, con conferma
-python -m scripts.estrai_bando <url> <identificativo> --salva-testo
+python -m scripts.ingestione.estrai_bando <url> <identificativo> --salva-testo
 
 # estrae in sequenza i bandi nuovi, con soglia automatica
-python -u -m scripts.estrai_nuovi --limite 10
+python -u -m scripts.ingestione.estrai_nuovi --limite 10
 ```
 
 L'estrazione è **assistita, non automatica**: ogni campo arriva con un livello
@@ -152,17 +212,27 @@ di confidenza e la frase del documento da cui è stato ricavato. I campi critici
 ### Interrogare
 
 ```bash
-python -m scripts.step3_verifica "Quali bandi sono aperti per il Comune?"
+python -m scripts.tutorial.step3_verifica "Quali bandi sono aperti per il Comune?"
 streamlit run app/app.py
 ```
 
 L'interfaccia mostra la risposta, il pannello di verifica dei dati citati, e le
 fonti navigabili: cliccando su un frammento se ne legge il testo originale.
 
+### Confrontare i due recuperi
+
+```bash
+python -m scripts.diagnostica.confronta_recupero
+```
+
+Esegue le stesse domande su entrambe le versioni e stampa le risposte affiancate
+con l'esito della verifica, per controllare che la scelta del vector store non
+cambi i dati citati.
+
 ### Collaudare il verificatore
 
 ```bash
-python -m scripts.test_verifica
+python -m scripts.diagnostica.test_verifica
 ```
 
 18 casi, gratuiti e istantanei: non chiamano il modello. Da rilanciare dopo ogni
@@ -176,14 +246,20 @@ modifica al verificatore.
 src/
 ├── config.py              configurazione e profilo dell'ente
 ├── vectorstore.py         punto unico di accesso a Chroma
-├── retrieval.py           recupero ibrido (denso + BM25, fusione RRF)
+├── retrieval.py           recupero ibrido su Chroma (denso + BM25, fusione RRF)
+├── pgstore.py             recupero ibrido su Postgres (pgvector + full-text)
 ├── ingestion/             estrazione e pulizia dei PDF, chunking
 ├── chains/                catena LCEL e router
 ├── database/              schema SQLite e repertorio di interrogazioni
 ├── estrazione/            acquisizione assistita dei bandi dal web
 └── verification/          verifica meccanica dei dati citati
 
-scripts/                   punti di ingresso da riga di comando
+scripts/
+├── ingestione/            popolamento degli archivi
+├── interrogazione/        ricerche dirette sugli archivi
+├── diagnostica/           ispezione, confronto, collaudo
+└── tutorial/              passaggi di costruzione, in ordine
+
 app/                       interfaccia Streamlit
 data/
 ├── raw/                   PDF originali (non versionati)
@@ -216,6 +292,17 @@ contraddicono il testo, stati mai aggiornati, date di rendicontazione presentate
 come scadenze di presentazione. L'estrattore è istruito a fidarsi del testo e a
 segnalare la discrepanza.
 
+**Postgres con pgvector accanto a Chroma.** Chroma è un file su disco: va bene
+in locale, non dove il filesystem è effimero. Postgres tiene vettori e dati
+numerici nello stesso sistema, la ricerca lessicale diventa nativa invece che
+ricostruita in memoria a ogni avvio, e i filtri sui metadati sono SQL invece di
+una sintassi a dizionario. Il costo è una dipendenza esterna, ed è il motivo per
+cui Chroma resta disponibile.
+
+**Il recupero è un'interfaccia, non un'implementazione.** La catena chiede
+`recupero.cerca(domanda, k=k)` e riceve una lista di tuple: non sa quale vector
+store ci sia sotto. Sostituirne uno costa una riga.
+
 ---
 
 ## Limiti
@@ -224,6 +311,9 @@ Vale la pena elencarli con la stessa precisione di ciò che il sistema fa.
 
 - **Non garantisce la completezza.** Il verificatore controlla che i dati citati
   esistano nella fonte; non può sapere cosa è stato omesso.
+- **Il verificatore controlla quantità e riferimenti normativi.** Una risposta
+  fatta di soli nomi propri passa senza rilievi, perché non contiene nulla di
+  misurabile.
 - **Non sa quali documenti dovrebbe avere.** Risponde solo su ciò che è in
   archivio, e lo dichiara quando non basta.
 - **L'estrazione è assistita.** I campi critici richiedono lettura umana delle
@@ -232,6 +322,10 @@ Vale la pena elencarli con la stessa precisione di ciò che il sistema fa.
   verificata.
 - **Le scadenze post-aggiudicazione non sono gestite.** Rendicontazioni, SAL,
   relazioni periodiche: il sistema le legge nei documenti ma non le traccia.
+- **La ricerca lessicale su Postgres unisce i termini con OR.** Trova sempre
+  qualcosa, ma può promuovere un frammento che ripete un termine comune senza
+  essere pertinente. BM25 pesa i termini per rarità e su questo si comporta
+  meglio.
 
 ## Stato
 
