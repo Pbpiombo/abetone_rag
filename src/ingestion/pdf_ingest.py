@@ -8,7 +8,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, RAW_DIR, SOGLIA_CHUNK, SOGLIA_PAGINA_MINIMA
+from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, SOGLIA_CHUNK, SOGLIA_PAGINA_MINIMA
 from src.vectorstore import apri_store
 
 
