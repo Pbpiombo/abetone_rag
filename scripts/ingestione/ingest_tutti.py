@@ -165,7 +165,7 @@ def ingerisci(scheda: dict) -> bool:
     metadati["fonte"] = percorso.name
 
     chunk = applica_metadati(chunk, metadati)
-    #salva_in_chroma(chunk, fonte=percorso.name)
+    salva_in_chroma(chunk, fonte=percorso.name)
     salva_chunk_in_db(chunk)
     return True
 

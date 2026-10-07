@@ -23,7 +23,7 @@ def carica_pdf(percorso: Path) -> list[Document]:
     for numero, pagina in enumerate(lettore.pages, start=1):
         pagine.append(Document(
             page_content=pagina.extract_text() or "",
-            metadata={"source": str(percorso.relative_to(RAW_DIR)), "page": numero},
+            metadata={"page": numero},
         ))
 
     if not any(p.page_content.strip() for p in pagine):

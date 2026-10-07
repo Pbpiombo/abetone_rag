@@ -1,7 +1,6 @@
 import os
 import psycopg
 import numpy as np
-import json
 import re
 
 
@@ -17,29 +16,24 @@ COSTANTE_RRF = 60
 
 def salva_chunk_in_db(documenti: list[Document]) -> None:
     """Salva i chunk dei documenti nel database."""
-    
-    try:
-        with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
-            register_vector(conn)
-            cursor= conn.cursor()
 
-            emb= crea_embeddings()
+    with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
+        register_vector(conn)
+        cursor = conn.cursor()
 
-            testi= [doc.page_content for doc in documenti]
-            vettori= emb.embed_documents(testi)
+        emb = crea_embeddings()
 
-            for documento, vettore in zip(documenti, vettori):
-                testo= documento.page_content
-                metadata= json.dumps(documento.metadata)
-                vettore_np= np.array(vettore)
-                cursor.execute(
-                    "INSERT INTO chunk (testo, metadata, embedding) VALUES (%s, %s, %s)",
-                    (testo, metadata, vettore_np)
-                )
-            conn.commit()
+        testi = [doc.page_content for doc in documenti]
+        vettori = emb.embed_documents(testi)
 
-    except Exception as e:
-        print("Errore durante la connessione a Supabase:", e)
+        for documento, vettore in zip(documenti, vettori):
+            cursor.execute(
+                "INSERT INTO chunk (testo, metadata, embedding) VALUES (%s, %s, %s)",
+                (documento.page_content, json.dumps(documento.metadata), np.array(vettore)),
+            )
+        conn.commit()
+
+    print(f"  Salvati {len(documenti)} chunk su Postgres")
 
 def a_or_query(domanda: str) -> str:
     parole = re.findall(r"\w+", domanda.lower())
