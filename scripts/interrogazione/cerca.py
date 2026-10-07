@@ -9,7 +9,7 @@ K = 8
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python -m scripts.cerca \"la tua domanda\"")
+        print('Uso: python -m scripts.cerca "la tua domanda"')
         return
 
     domanda = " ".join(sys.argv[1:])
@@ -22,8 +22,10 @@ def main() -> None:
     ):
         meta = doc.metadata
         testo = " ".join(doc.page_content.split())[:200]
-        print(f"[{posizione}] {distanza:.3f} | {meta.get('ente')} "
-              f"| {meta.get('tipo_documento')} | p. {meta.get('page')}")
+        print(
+            f"[{posizione}] {distanza:.3f} | {meta.get('ente')} "
+            f"| {meta.get('tipo_documento')} | p. {meta.get('page')}"
+        )
         print(f"    {testo}...\n")
 
 

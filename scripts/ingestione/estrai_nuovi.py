@@ -19,13 +19,13 @@ import time
 
 from src.estrazione.bandi import (
     costruisci_estrattore,
+    decidi_automatico,
     estrai,
     valida,
-    decidi_automatico,
 )
 from src.estrazione.elenco import scopri
 from src.estrazione.pagina import prendi
-from src.estrazione.registro import registra, da_non_riesaminare, riepilogo
+from src.estrazione.registro import da_non_riesaminare, registra, riepilogo
 from src.estrazione.salva import salva
 
 FONTE = "Portale bandi Regione Toscana"
@@ -94,9 +94,11 @@ def esamina(estrattore, voce) -> tuple[str, str]:
 def mostra_riepilogo(esiti: dict) -> None:
     """Stampa il riepilogo finale, raggruppando gli scarti per motivo."""
     print("\n" + "=" * 74)
-    print(f"RIEPILOGO: {len(esiti['salvato'])} salvati, "
-          f"{len(esiti['scartato'])} scartati, "
-          f"{len(esiti['fallito'])} falliti")
+    print(
+        f"RIEPILOGO: {len(esiti['salvato'])} salvati, "
+        f"{len(esiti['scartato'])} scartati, "
+        f"{len(esiti['fallito'])} falliti"
+    )
     print("=" * 74)
 
     if esiti["salvato"]:

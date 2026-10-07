@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Risultato:
     """L'esito di un'interrogazione, pronto per essere dato al modello."""
+
     testo: str
     fonti: list[str] = field(default_factory=list)
     trovato: bool = True

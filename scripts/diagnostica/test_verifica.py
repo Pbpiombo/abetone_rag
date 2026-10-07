@@ -82,19 +82,43 @@ CASI = [
         "risposta": "Non trovo la risposta nei documenti disponibili.",
         "atteso": {"verificato": 0, "non_trovato": 0, "non_citato": 0},
     },
-        {
+    {
         "nome": "dato numerico corretto",
         "risposta": "Il comune ha 1834 abitanti (fonte: [D1], ISTAT).",
-        "dati": [("popolazione_ultima", type("R", (), {"testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.", "fonti": ["ISTAT"]})())],
+        "dati": [
+            (
+                "popolazione_ultima",
+                type(
+                    "R",
+                    (),
+                    {
+                        "testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.",
+                        "fonti": ["ISTAT"],
+                    },
+                )(),
+            )
+        ],
         "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
     },
     {
         "nome": "dato numerico ALTERATO",
         "risposta": "Il comune ha 1900 abitanti (fonte: [D1], ISTAT).",
-        "dati": [("popolazione_ultima", type("R", (), {"testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.", "fonti": ["ISTAT"]})())],
+        "dati": [
+            (
+                "popolazione_ultima",
+                type(
+                    "R",
+                    (),
+                    {
+                        "testo": "Dato più recente: 1834 abitanti al 1 gennaio 2026.",
+                        "fonti": ["ISTAT"],
+                    },
+                )(),
+            )
+        ],
         "atteso": {"verificato": 0, "non_trovato": 1, "non_citato": 0},
     },
-        {
+    {
         "nome": "riferimento all'atto in prosa, non citazione",
         "risposta": (
             "Secondo il Decreto dirigenziale n. 9550 del 28/04/2026, "
@@ -112,7 +136,7 @@ CASI = [
         "risposta": "Il totale è 19.570,00 € (fonte: [2], Comune, pag. 14).",
         "atteso": {"verificato": 1, "non_trovato": 0, "non_citato": 0},
     },
-        {
+    {
         "nome": "importo tra nome atto e data NON deve sparire",
         "risposta": (
             "Il decreto prevede € 322,00 con scadenza il 28/04/2026 "
@@ -120,10 +144,22 @@ CASI = [
         ),
         "atteso": {"verificato": 1, "non_trovato": 1, "non_citato": 0},
     },
-        {
+    {
         "nome": "separatore migliaia dentro una frase",
         "risposta": "Il progetto va da 25.000 a 35.000 euro (fonte: [D1], Regione).",
-        "dati": [("bandi", type("R", (), {"testo": "progetto ammissibile da 25.000 a 35.000 euro", "fonti": ["Portale"]})())],
+        "dati": [
+            (
+                "bandi",
+                type(
+                    "R",
+                    (),
+                    {
+                        "testo": "progetto ammissibile da 25.000 a 35.000 euro",
+                        "fonti": ["Portale"],
+                    },
+                )(),
+            )
+        ],
         "atteso": {"verificato": 2, "non_trovato": 0, "non_citato": 0},
     },
     {
@@ -131,7 +167,7 @@ CASI = [
         "risposta": "Scade il 2026-10-15 alle 12:00 (fonte: [1], Regione, pag. 11).",
         "atteso": {"verificato": 0, "non_trovato": 2, "non_citato": 0},
     },
-        {
+    {
         "nome": "riferimento normativo CORRETTO ma assente dal frammento citato",
         "risposta": (
             "La dichiarazione è resa ai sensi del D.Lgs. 231/2007 "
@@ -140,6 +176,7 @@ CASI = [
         "atteso": {"verificato": 0, "non_trovato": 1, "non_citato": 0},
     },
 ]
+
 
 def conta(esiti) -> dict:
     conteggio = {"verificato": 0, "non_trovato": 0, "non_citato": 0}

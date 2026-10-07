@@ -1,7 +1,7 @@
 """Punto unico di accesso al vector store Chroma."""
 
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 from src.config import CHROMA_DIR, COLLECTION_NAME, EMBEDDING_MODEL
 

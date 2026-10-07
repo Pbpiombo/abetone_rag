@@ -4,30 +4,31 @@ Il modello non scrive SQL: sceglie un'interrogazione di questo elenco
 e ne fornisce i parametri. Le query sono scritte e verificate a mano.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
-from src.database.schema import connetti
-from src.database.modelli import Risultato
-from src.database.interrogazioni_dati import (
-    popolazione_anno,
-    popolazione_ultima,
-    popolazione_serie,
-    popolazione_variazione,
-    dato_territoriale,
-    densita_abitativa,
-)
 from src.database.interrogazioni_bandi import (
     bandi_aperti_per_comuni,
     bandi_in_scadenza,
     bandi_per_tema,
     dettaglio_bando,
 )
+from src.database.interrogazioni_dati import (
+    dato_territoriale,
+    densita_abitativa,
+    popolazione_anno,
+    popolazione_serie,
+    popolazione_ultima,
+    popolazione_variazione,
+)
+from src.database.modelli import Risultato
+from src.database.schema import connetti
 
 
 @dataclass
 class Voce:
     """Una voce del repertorio, come la vede il modello."""
+
     nome: str
     descrizione: str
     parametri: dict
@@ -140,31 +141,33 @@ def stato_archivio() -> str:
         ).fetchone()
         righe.append(
             f"popolazione: {pop[0]} anni, dal {pop[1]} al {pop[2]}"
-            if pop[0] else "popolazione: VUOTA"
+            if pop[0]
+            else "popolazione: VUOTA"
         )
 
         bil = conn.execute("SELECT COUNT(*) FROM bilancio").fetchone()[0]
         righe.append(
             f"bilancio: {bil} voci"
-            if bil else "bilancio: VUOTA, nessun dato disponibile"
+            if bil
+            else "bilancio: VUOTA, nessun dato disponibile"
         )
 
         tur = conn.execute("SELECT COUNT(*) FROM turismo").fetchone()[0]
         righe.append(
             f"turismo: {tur} rilevazioni"
-            if tur else "turismo: VUOTA, nessun dato disponibile"
+            if tur
+            else "turismo: VUOTA, nessun dato disponibile"
         )
 
         chiavi = conn.execute("SELECT chiave FROM territorio").fetchall()
         elenco = ", ".join(r["chiave"] for r in chiavi) or "nessuna"
         righe.append(f"territorio: chiavi disponibili: {elenco}")
 
-        ban = conn.execute(
-            "SELECT COUNT(*), SUM(ammette_comuni) FROM bandi"
-        ).fetchone()
+        ban = conn.execute("SELECT COUNT(*), SUM(ammette_comuni) FROM bandi").fetchone()
         righe.append(
             f"bandi: {ban[0]} in archivio, di cui {ban[1] or 0} aperti ai Comuni"
-            if ban[0] else "bandi: VUOTA, nessun dato disponibile"
+            if ban[0]
+            else "bandi: VUOTA, nessun dato disponibile"
         )
 
         return "\n".join(f"- {r}" for r in righe)

@@ -15,7 +15,7 @@ SCHEMA_ATTO = (
     r"(?:decreto|deliberazione|delibera|avviso)"
     r"(?:\s+\w+|\s+n\.?|\s+del|\s+\d+|\s*,)*"
     r"\s*\d{1,2}/\d{1,2}/\d{4}"
-)   
+)
 
 # Un riferimento sciolto a un frammento: [3], [D1]
 SCHEMA_RIFERIMENTO = r"\[D?\d+\]"
@@ -68,10 +68,11 @@ SCHEMI = {
 @dataclass
 class Esito:
     """Il risultato della verifica di un singolo dato."""
+
     tipo: str
     valore: str
     frammenti: list[str]
-    stato: str          # verificato | non_trovato | non_citato
+    stato: str  # verificato | non_trovato | non_citato
     dettaglio: str = ""
 
 
@@ -95,11 +96,13 @@ def normalizza(testo: str) -> str:
 
 def maschera_citazioni(risposta: str) -> str:
     """Sostituisce citazioni, riferimenti ad atti e rimandi ai frammenti."""
+
     def a_spazi(m):
         return " " * len(m.group(0))
 
-    risposta = re.sub(SCHEMA_CITAZIONE, a_spazi, risposta,
-                      flags=re.DOTALL | re.IGNORECASE)
+    risposta = re.sub(
+        SCHEMA_CITAZIONE, a_spazi, risposta, flags=re.DOTALL | re.IGNORECASE
+    )
     risposta = re.sub(SCHEMA_ATTO, a_spazi, risposta, flags=re.IGNORECASE)
     return re.sub(SCHEMA_RIFERIMENTO, a_spazi, risposta)
 
@@ -141,9 +144,7 @@ def trova_dati(risposta: str) -> list[tuple[str, str, int]]:
     return sorted(trovati, key=lambda t: t[2])
 
 
-def frammenti_citati(
-    posizione: int, citazioni: list[tuple[int, str]]
-) -> list[str]:
+def frammenti_citati(posizione: int, citazioni: list[tuple[int, str]]) -> list[str]:
     """I frammenti citati dopo un dato, entro il paragrafo.
 
     Restituisce il gruppo di citazioni piu' vicino, cosi' un dato seguito
@@ -159,11 +160,7 @@ def frammenti_citati(
     if prima - posizione > FINESTRA_CITAZIONE:
         return []
 
-    return [
-        etichetta
-        for pos, etichetta in successive
-        if pos <= prima + 200
-    ]
+    return [etichetta for pos, etichetta in successive if pos <= prima + 200]
 
 
 def verifica(
@@ -198,17 +195,13 @@ def verifica(
         ago = normalizza(valore)
         varianti = {ago, re.sub(r"\.00$", "", ago)}
         dentro = [
-            e for e in etichette
-            if e in testi and any(v in testi[e] for v in varianti)
+            e for e in etichette if e in testi and any(v in testi[e] for v in varianti)
         ]
 
         if dentro:
             esiti.append(Esito(tipo, valore, dentro, "verificato"))
         else:
-            altrove = [
-                e for e, t in testi.items()
-                if any(v in t for v in varianti)
-            ]
+            altrove = [e for e, t in testi.items() if any(v in t for v in varianti)]
             dettaglio = (
                 f"presente invece in {altrove}"
                 if altrove

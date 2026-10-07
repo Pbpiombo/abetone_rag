@@ -4,11 +4,17 @@ import re
 from pathlib import Path
 
 import pypdf
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from src.config import CHROMA_DIR, CHUNK_SIZE, CHUNK_OVERLAP, SOGLIA_CHUNK, SOGLIA_PAGINA_MINIMA
+from src.config import (
+    CHROMA_DIR,
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    SOGLIA_CHUNK,
+    SOGLIA_PAGINA_MINIMA,
+)
 from src.vectorstore import apri_store
 
 
@@ -21,15 +27,17 @@ def carica_pdf(percorso: Path) -> list[Document]:
 
     pagine = []
     for numero, pagina in enumerate(lettore.pages, start=1):
-        pagine.append(Document(
-            page_content=pagina.extract_text() or "",
-            metadata={"page": numero},
-        ))
+        pagine.append(
+            Document(
+                page_content=pagina.extract_text() or "",
+                metadata={"page": numero},
+            )
+        )
 
     if not any(p.page_content.strip() for p in pagine):
         print(f"  ATTENZIONE: nessun testo estratto da {percorso.name}")
-    
-    return pagine   
+
+    return pagine
 
 
 def pulisci(testo: str, intestazione: str | None = None) -> str:
@@ -82,9 +90,8 @@ def spezza(
             print(f"  Saltata pagina {numero}: indice")
             continue
 
-        testo= pulisci(pagina.page_content, intestazione)
+        testo = pulisci(pagina.page_content, intestazione)
 
-        
         if len(testo) < SOGLIA_PAGINA_MINIMA:
             print(f"  Saltata pagina {numero}: troppo corta ({len(testo)} caratteri)")
             continue

@@ -43,6 +43,7 @@ ANNO_NELLO_SLUG = re.compile(r"(?:^|-)(20[0-2]\d)(?:-|$)")
 @dataclass
 class Voce:
     """Un bando trovato nell'elenco del portale."""
+
     slug: str
     url: str
     titolo: str

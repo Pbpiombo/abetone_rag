@@ -6,14 +6,14 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
-from src.config import MODEL_NAME
-from src.retrieval import RecuperoIbrido
 from src.chains.router import (
     costruisci_router,
     decidi,
     esegui_interrogazioni,
     formatta_dati,
 )
+from src.config import MODEL_NAME
+from src.retrieval import RecuperoIbrido
 
 K_DEFAULT = 10
 
@@ -68,13 +68,15 @@ Verifica che ogni frammento riguardi davvero la domanda. I frammenti sono \
 stati recuperati per somiglianza automatica e alcuni possono essere fuori \
 tema: quelli li ignori, senza citarli."""
 
-MODELLO_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", ISTRUZIONI),
-    ("human",
-     "FRAMMENTI:\n\n{contesto}\n\n"
-     "DATI:\n\n{dati}\n\n"
-     "---\n\nDOMANDA: {domanda}"),
-])
+MODELLO_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", ISTRUZIONI),
+        (
+            "human",
+            "FRAMMENTI:\n\n{contesto}\n\nDATI:\n\n{dati}\n\n---\n\nDOMANDA: {domanda}",
+        ),
+    ]
+)
 
 
 def etichetta(documento: Document, numero: int) -> str:
@@ -102,7 +104,7 @@ def formatta(documenti: list[Document]) -> str:
 def costruisci_catena(k: int = K_DEFAULT, recupero=None):
     """Assembla la chain LCEL: router, recupero ibrido, generazione."""
     if recupero is None:
-        recupero= RecuperoIbrido()
+        recupero = RecuperoIbrido()
     router = costruisci_router()
 
     modello = ChatAnthropic(
@@ -137,9 +139,6 @@ def costruisci_catena(k: int = K_DEFAULT, recupero=None):
             "dati": dati,
         }
 
-    return (
-        RunnableLambda(prepara)
-        | RunnablePassthrough.assign(
-            risposta=MODELLO_PROMPT | modello | StrOutputParser()
-        )
+    return RunnableLambda(prepara) | RunnablePassthrough.assign(
+        risposta=MODELLO_PROMPT | modello | StrOutputParser()
     )

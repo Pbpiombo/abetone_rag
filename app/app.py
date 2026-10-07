@@ -13,7 +13,7 @@ import streamlit as st
 
 from src.chains.rag import costruisci_catena
 from src.database.repertorio import stato_archivio
-from src.verification.controllo import verifica, riassumi
+from src.verification.controllo import riassumi, verifica
 
 st.set_page_config(
     page_title="Assistente territoriale",
@@ -62,13 +62,10 @@ def mostra_verifica(esito: dict) -> None:
             "Verificare manualmente prima di riutilizzare la risposta."
         )
     else:
-        st.success(
-            f"{conteggio['verificato']} dati verificati nella fonte citata."
-        )
+        st.success(f"{conteggio['verificato']} dati verificati nella fonte citata.")
 
     da_mostrare = [
-        e for e in esiti
-        if not (e.tipo == "anno" and e.stato == "verificato")
+        e for e in esiti if not (e.tipo == "anno" and e.stato == "verificato")
     ]
 
     for e in da_mostrare:
@@ -112,7 +109,9 @@ def mostra_fonti(esito: dict) -> None:
             with st.expander(intestazione, expanded=False):
                 if numero <= len(origini):
                     st.caption(f"recuperato da: {', '.join(origini[numero - 1])}")
-                st.caption(f"atto: {meta.get('riferimento_atto') or meta.get('titolo')}")
+                st.caption(
+                    f"atto: {meta.get('riferimento_atto') or meta.get('titolo')}"
+                )
                 st.write(" ".join(doc.page_content.split()))
 
 

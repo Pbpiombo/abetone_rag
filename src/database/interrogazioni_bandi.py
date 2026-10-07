@@ -23,9 +23,7 @@ def formatta_bando(riga, oggi: str) -> str:
     if riga["a_sportello"]:
         pezzi.append(f"a sportello fino al {riga['scadenza']}")
     elif riga["scadenza"]:
-        giorni = (
-            date.fromisoformat(riga["scadenza"]) - date.fromisoformat(oggi)
-        ).days
+        giorni = (date.fromisoformat(riga["scadenza"]) - date.fromisoformat(oggi)).days
         stato = f"scade il {riga['scadenza']}"
         if giorni >= 0:
             stato += f" (fra {giorni} giorni)"
@@ -180,8 +178,7 @@ def dettaglio_bando(conn: sqlite3.Connection, id_bando: str) -> Risultato:
     ammessi = "SÌ" if riga["ammette_comuni"] else "NO"
 
     dotazione = (
-        f"{euro(riga['dotazione'])} euro"
-        if riga["dotazione"] else "non indicata"
+        f"{euro(riga['dotazione'])} euro" if riga["dotazione"] else "non indicata"
     )
 
     return Risultato(

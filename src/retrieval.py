@@ -29,6 +29,7 @@ def tokenizza(testo: str) -> list[str]:
 
     return token
 
+
 def chiave_di(documento: Document) -> tuple:
     """Identificatore stabile di un chunk, per riconoscerlo nelle due liste."""
     meta = documento.metadata
@@ -47,9 +48,7 @@ class RecuperoIbrido:
             for testo, meta in zip(dati["documents"], dati["metadatas"])
         ]
 
-        self.bm25 = BM25Okapi(
-            [tokenizza(d.page_content) for d in self.documenti]
-        )
+        self.bm25 = BM25Okapi([tokenizza(d.page_content) for d in self.documenti])
 
         print(f"  Indice lessicale costruito su {len(self.documenti)} chunk")
 
@@ -86,10 +85,6 @@ class RecuperoIbrido:
                 punti[chiave]["punteggio"] += 1 / (COSTANTE_RRF + posizione)
                 punti[chiave]["origini"].append(f"{nome} #{posizione}")
 
-        ordinati = sorted(
-            punti.values(), key=lambda v: v["punteggio"], reverse=True
-        )
-    
-        return [
-            (v["doc"], v["punteggio"], v["origini"]) for v in ordinati[:k]
-        ]
+        ordinati = sorted(punti.values(), key=lambda v: v["punteggio"], reverse=True)
+
+        return [(v["doc"], v["punteggio"], v["origini"]) for v in ordinati[:k]]

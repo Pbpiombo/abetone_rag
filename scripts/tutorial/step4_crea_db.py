@@ -1,11 +1,11 @@
 """STEP 4 - crea il database dei dati numerici e lo popola dai CSV."""
 
 from src.database.schema import (
+    TABELLE_DA_CSV,
+    carica_csv,
     connetti,
     crea_schema,
-    carica_csv,
     riepilogo,
-    TABELLE_DA_CSV,
 )
 
 

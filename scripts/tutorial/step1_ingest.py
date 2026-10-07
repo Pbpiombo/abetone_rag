@@ -2,10 +2,10 @@
 
 from src.config import RAW_DIR
 from src.ingestion.pdf_ingest import (
-    carica_pdf,
-    spezza,
     applica_metadati,
+    carica_pdf,
     salva_in_chroma,
+    spezza,
 )
 
 INTESTAZIONE = (

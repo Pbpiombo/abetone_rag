@@ -10,7 +10,7 @@ Uso:
 
 import sys
 
-from src.estrazione.elenco import scopri, gia_in_archivio, leggi_elenco
+from src.estrazione.elenco import gia_in_archivio, leggi_elenco, scopri
 
 
 def mostra_spariti() -> None:
@@ -71,7 +71,7 @@ def main() -> None:
             anno = f" [{v.anno}]" if v.anno else ""
             print(f"{marca}  #{v.posizione:<3} {v.titolo}{anno}")
             print(f"       {v.url}")
-            
+
     mostra_spariti()
 
 

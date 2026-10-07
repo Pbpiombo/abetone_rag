@@ -1,10 +1,9 @@
 """Estrazione assistita dei campi di un bando dal testo della pagina."""
 
-import re
 import json
+import re
 from dataclasses import dataclass
 from datetime import date
-
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
@@ -94,15 +93,18 @@ usa null e confidenza "bassa".
 4. Se un dato non e' nel testo, usa null. NON dedurre, NON completare con \
 conoscenze tue."""
 
-MODELLO_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", ISTRUZIONI),
-    ("human", "TESTO DELLA PAGINA:\n\n{testo}"),
-])
+MODELLO_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", ISTRUZIONI),
+        ("human", "TESTO DELLA PAGINA:\n\n{testo}"),
+    ]
+)
 
 
 @dataclass
 class Campo:
     """Un campo estratto, con la sua confidenza e la prova."""
+
     nome: str
     valore: object
     confidenza: str
@@ -163,13 +165,15 @@ def estrai(estrattore, testo: str, debug: bool = False) -> list[Campo]:
         if confidenza not in ("alta", "media", "bassa"):
             confidenza = "bassa"
 
-        campi.append(Campo(
-            nome=nome,
-            valore=valore,
-            confidenza=confidenza,
-            prova=prova,
-            critico=critico,
-        ))
+        campi.append(
+            Campo(
+                nome=nome,
+                valore=valore,
+                confidenza=confidenza,
+                prova=prova,
+                critico=critico,
+            )
+        )
 
     return campi
 
@@ -177,6 +181,7 @@ def estrai(estrattore, testo: str, debug: bool = False) -> list[Campo]:
 def da_rivedere(campi: list[Campo]) -> list[Campo]:
     """I campi che richiedono conferma: critici o a bassa confidenza."""
     return [c for c in campi if c.critico or c.confidenza != "alta"]
+
 
 def normalizza_valore(nome: str, valore) -> object:
     """Converte il valore estratto nel tipo che il database si aspetta."""
@@ -237,6 +242,7 @@ def valida(campi: list[Campo]) -> tuple[dict, list[str]]:
         riga["a_sportello"] = 0
 
     return riga, problemi
+
 
 def decidi_automatico(campi: list[Campo], riga: dict) -> tuple[bool, str]:
     """Decide se salvare senza conferma umana.

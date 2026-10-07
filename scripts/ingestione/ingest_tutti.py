@@ -2,10 +2,10 @@
 
 from src.config import RAW_DIR
 from src.ingestion.pdf_ingest import (
-    carica_pdf,
-    spezza,
     applica_metadati,
+    carica_pdf,
     salva_in_chroma,
+    spezza,
 )
 from src.pgstore import salva_chunk_in_db
 
@@ -105,7 +105,7 @@ DOCUMENTI = [
             "id_bando": "",
         },
     },
-        {
+    {
         "chiave": "13287",
         "intestazione": None,
         "salta_pagine": [],
@@ -180,4 +180,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()  
+    main()

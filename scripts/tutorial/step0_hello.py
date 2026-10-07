@@ -1,19 +1,23 @@
 """STEP 0 - verifica che ambiente, chiave API e chain LCEL funzionino."""
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
 from src.config import MODEL_NAME
 
 # 1. IL PROMPT
-prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "Sei un assistente tecnico per la Pubblica Amministrazione italiana, "
-     "esperto di programmazione territoriale di piccoli comuni montani. "
-     "Rispondi in italiano, in modo conciso e concreto."),
-    ("human", "{domanda}"),
-])
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Sei un assistente tecnico per la Pubblica Amministrazione italiana, "
+            "esperto di programmazione territoriale di piccoli comuni montani. "
+            "Rispondi in italiano, in modo conciso e concreto.",
+        ),
+        ("human", "{domanda}"),
+    ]
+)
 
 # 2. IL MODELLO
 model = ChatAnthropic(

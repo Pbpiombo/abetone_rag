@@ -6,7 +6,6 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.config import MODEL_NAME
 from src.config import MODEL_NAME, PROFILO_ENTE
 from src.database.repertorio import descrivi_repertorio, esegui, stato_archivio
 
@@ -64,10 +63,12 @@ ESEMPI
 "Il calo demografico giustifica la richiesta di fondi per le aree interne?"
 {{"documenti": true, "interrogazioni": [{{"nome": "popolazione_variazione", "parametri": {{}}}}]}}"""
 
-MODELLO_ROUTER = ChatPromptTemplate.from_messages([
-    ("system", ISTRUZIONI_ROUTER),
-    ("human", "{domanda}"),
-])
+MODELLO_ROUTER = ChatPromptTemplate.from_messages(
+    [
+        ("system", ISTRUZIONI_ROUTER),
+        ("human", "{domanda}"),
+    ]
+)
 
 
 def costruisci_router():
@@ -88,6 +89,7 @@ def pulisci_json(testo: str) -> str:
         testo = "\n".join(righe)
     return testo.strip()
 
+
 def descrivi_profilo() -> str:
     """Il profilo dell'ente in forma testuale, per il prompt."""
     righe = []
@@ -100,14 +102,17 @@ def descrivi_profilo() -> str:
             righe.append(f"- {chiave}: {valore}")
     return "\n".join(righe)
 
+
 def decidi(router, domanda: str) -> dict:
     """Restituisce la decisione, con un ripiego sicuro in caso di errore."""
-    grezzo = router.invoke({
-        "domanda": domanda,
-        "repertorio": descrivi_repertorio(),
-        "stato": stato_archivio(),
-        "profilo": descrivi_profilo(),
-    })
+    grezzo = router.invoke(
+        {
+            "domanda": domanda,
+            "repertorio": descrivi_repertorio(),
+            "stato": stato_archivio(),
+            "profilo": descrivi_profilo(),
+        }
+    )
 
     try:
         decisione = json.loads(pulisci_json(grezzo))
@@ -142,8 +147,7 @@ def formatta_dati(esiti: list) -> str:
     for numero, (nome, risultato) in enumerate(esiti, start=1):
         fonti = "; ".join(risultato.fonti) if risultato.fonti else "nessuna"
         blocchi.append(
-            f"[D{numero}] interrogazione: {nome} | fonte: {fonti}\n"
-            f"{risultato.testo}"
+            f"[D{numero}] interrogazione: {nome} | fonte: {fonti}\n{risultato.testo}"
         )
 
     return "\n\n".join(blocchi)

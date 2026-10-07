@@ -2,7 +2,6 @@
 
 import csv
 import sqlite3
-from pathlib import Path
 
 from src.config import PROCESSED_DIR, SQLITE_PATH
 
@@ -84,13 +83,30 @@ TABELLE_DA_CSV = {
     "bilancio": ["anno", "tipo", "voce", "importo", "fonte"],
     "turismo": ["anno", "mese", "arrivi", "presenze", "fonte"],
     "territorio": ["chiave", "valore", "unita", "fonte"],
-        "bandi": [
-        "id", "titolo", "ente", "tema", "programma",
-        "apertura", "scadenza", "scadenza_nota", "a_sportello",
-        "ammette_comuni", "beneficiari", "territorio", "premialita",
-        "costo_min", "costo_max", "contributo_perc",
-        "contributo_min", "contributo_max", "dotazione",
-        "url", "riferimento_atto", "fonte", "verificato_il",
+    "bandi": [
+        "id",
+        "titolo",
+        "ente",
+        "tema",
+        "programma",
+        "apertura",
+        "scadenza",
+        "scadenza_nota",
+        "a_sportello",
+        "ammette_comuni",
+        "beneficiari",
+        "territorio",
+        "premialita",
+        "costo_min",
+        "costo_max",
+        "contributo_perc",
+        "contributo_min",
+        "contributo_max",
+        "dotazione",
+        "url",
+        "riferimento_atto",
+        "fonte",
+        "verificato_il",
     ],
 }
 

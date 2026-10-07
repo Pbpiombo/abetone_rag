@@ -39,8 +39,7 @@ def da_non_riesaminare() -> set[str]:
         conn.close()
 
     return {
-        r["slug"] for r in righe
-        if any(r["motivo"].startswith(d) for d in DEFINITIVI)
+        r["slug"] for r in righe if any(r["motivo"].startswith(d) for d in DEFINITIVI)
     }
 
 
@@ -51,9 +50,7 @@ def riepilogo() -> str:
         righe = conn.execute(
             "SELECT esito, COUNT(*) AS quante FROM scansioni GROUP BY esito"
         ).fetchall()
-        ultima = conn.execute(
-            "SELECT MAX(esaminato_il) FROM scansioni"
-        ).fetchone()[0]
+        ultima = conn.execute("SELECT MAX(esaminato_il) FROM scansioni").fetchone()[0]
     finally:
         conn.close()
 

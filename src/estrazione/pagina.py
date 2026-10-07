@@ -32,7 +32,9 @@ def a_testo(html: str) -> str:
     """
     for blocco in BLOCCHI:
         html = re.sub(
-            rf"<{blocco}\b.*?</{blocco}>", " ", html,
+            rf"<{blocco}\b.*?</{blocco}>",
+            " ",
+            html,
             flags=re.DOTALL | re.IGNORECASE,
         )
 
@@ -53,11 +55,22 @@ def a_testo(html: str) -> str:
 def _entita(testo: str) -> str:
     """Converte le entita' HTML piu' comuni."""
     sostituzioni = {
-        "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
-        "&quot;": '"', "&#39;": "'", "&apos;": "'",
-        "&egrave;": "è", "&eacute;": "é", "&agrave;": "à",
-        "&igrave;": "ì", "&ograve;": "ò", "&ugrave;": "ù",
-        "&euro;": "€", "&ndash;": "-", "&mdash;": "-",
+        "&nbsp;": " ",
+        "&amp;": "&",
+        "&lt;": "<",
+        "&gt;": ">",
+        "&quot;": '"',
+        "&#39;": "'",
+        "&apos;": "'",
+        "&egrave;": "è",
+        "&eacute;": "é",
+        "&agrave;": "à",
+        "&igrave;": "ì",
+        "&ograve;": "ò",
+        "&ugrave;": "ù",
+        "&euro;": "€",
+        "&ndash;": "-",
+        "&mdash;": "-",
     }
 
     for entita, carattere in sostituzioni.items():

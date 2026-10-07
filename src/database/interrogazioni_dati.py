@@ -7,9 +7,7 @@ from src.database.modelli import Risultato, fonti_distinte
 
 def popolazione_anno(conn: sqlite3.Connection, anno: int) -> Risultato:
     """Residenti in un anno specifico."""
-    riga = conn.execute(
-        "SELECT * FROM popolazione WHERE anno = ?", (anno,)
-    ).fetchone()
+    riga = conn.execute("SELECT * FROM popolazione WHERE anno = ?", (anno,)).fetchone()
 
     if riga is None:
         disponibili = conn.execute(
@@ -38,8 +36,7 @@ def popolazione_ultima(conn: sqlite3.Connection) -> Risultato:
         return Risultato("Nessun dato di popolazione in archivio.", trovato=False)
 
     return Risultato(
-        f"Dato più recente: {riga['residenti']} abitanti "
-        f"al 1 gennaio {riga['anno']}.",
+        f"Dato più recente: {riga['residenti']} abitanti al 1 gennaio {riga['anno']}.",
         fonti=[riga["fonte"]],
     )
 
@@ -101,8 +98,7 @@ def dato_territoriale(conn: sqlite3.Connection, chiave: str) -> Risultato:
         chiavi = conn.execute("SELECT chiave FROM territorio").fetchall()
         elenco = ", ".join(r["chiave"] for r in chiavi) or "nessuna"
         return Risultato(
-            f"Nessun dato territoriale per '{chiave}'. "
-            f"Chiavi disponibili: {elenco}.",
+            f"Nessun dato territoriale per '{chiave}'. Chiavi disponibili: {elenco}.",
             trovato=False,
         )
 

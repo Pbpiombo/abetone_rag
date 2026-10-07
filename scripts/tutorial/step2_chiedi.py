@@ -25,9 +25,11 @@ def mostra(esito: dict) -> None:
         zip(esito["documenti"], esito["origini"]), start=1
     ):
         meta = documento.metadata
-        print(f"  [{numero}] {meta.get('ente')} "
-              f"| {meta.get('tipo_documento')} | pag. {meta.get('page')} "
-              f"| {', '.join(origine)}")
+        print(
+            f"  [{numero}] {meta.get('ente')} "
+            f"| {meta.get('tipo_documento')} | pag. {meta.get('page')} "
+            f"| {', '.join(origine)}"
+        )
 
     print("\nRISPOSTA")
     print(esito["risposta"])

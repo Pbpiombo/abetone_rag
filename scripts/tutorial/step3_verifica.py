@@ -3,7 +3,7 @@
 import sys
 
 from src.chains.rag import costruisci_catena
-from src.verification.controllo import verifica, riassumi
+from src.verification.controllo import riassumi, verifica
 
 SIMBOLI = {
     "verificato": "OK ",
@@ -27,8 +27,10 @@ def mostra(esito_catena: dict) -> None:
     decisione = esito_catena["decisione"]
     nomi = [i.get("nome") for i in decisione.get("interrogazioni", [])]
 
-    print(f"\nROUTER  documenti: {decisione['documenti']}  "
-          f"interrogazioni: {nomi or 'nessuna'}")
+    print(
+        f"\nROUTER  documenti: {decisione['documenti']}  "
+        f"interrogazioni: {nomi or 'nessuna'}"
+    )
     print(f"        frammenti recuperati: {len(esito_catena['documenti'])}")
 
     if "errore" in decisione:
@@ -38,9 +40,9 @@ def mostra(esito_catena: dict) -> None:
     print(esito_catena["risposta"])
 
     esiti = verifica(
-    esito_catena["risposta"],
-    esito_catena["documenti"],
-    esito_catena.get("esiti_dati"),
+        esito_catena["risposta"],
+        esito_catena["documenti"],
+        esito_catena.get("esiti_dati"),
     )
 
     print("\nVERIFICA DEI DATI CITATI")
@@ -61,9 +63,11 @@ def mostra(esito_catena: dict) -> None:
             print(f"       -> {e.dettaglio}")
 
     conteggio = riassumi(esiti)
-    print(f"\n  Verificati: {conteggio['verificato']}  "
-          f"Non trovati: {conteggio['non_trovato']}  "
-          f"Non citati: {conteggio['non_citato']}")
+    print(
+        f"\n  Verificati: {conteggio['verificato']}  "
+        f"Non trovati: {conteggio['non_trovato']}  "
+        f"Non citati: {conteggio['non_citato']}"
+    )
 
 
 def main() -> None:

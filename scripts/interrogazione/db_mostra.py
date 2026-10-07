@@ -1,6 +1,6 @@
 """Ispezione del contenuto del database dei dati numerici."""
 
-from src.database.schema import connetti, TABELLE_DA_CSV
+from src.database.schema import TABELLE_DA_CSV, connetti
 
 
 def main() -> None:

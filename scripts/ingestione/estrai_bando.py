@@ -23,10 +23,10 @@ from pathlib import Path
 from src.config import PROCESSED_DIR
 from src.estrazione.bandi import (
     costruisci_estrattore,
-    estrai,
     da_rivedere,
-    valida,
     decidi_automatico,
+    estrai,
+    valida,
 )
 from src.estrazione.pagina import prendi
 from src.estrazione.salva import esiste, salva
@@ -51,13 +51,20 @@ def mostra(campi) -> None:
 
 def mostra_confronto(precedente: dict, riga: dict) -> None:
     """Evidenzia le differenze rispetto alla riga gia' in archivio."""
-    print(f"\nATTENZIONE: '{riga['id']}' esiste gia' in archivio "
-          f"(verificato il {precedente['verificato_il']}).")
+    print(
+        f"\nATTENZIONE: '{riga['id']}' esiste gia' in archivio "
+        f"(verificato il {precedente['verificato_il']})."
+    )
 
     cambiati = [
         (c, precedente.get(c), riga.get(c))
-        for c in ("scadenza", "ammette_comuni", "a_sportello",
-                  "contributo_perc", "dotazione")
+        for c in (
+            "scadenza",
+            "ammette_comuni",
+            "a_sportello",
+            "contributo_perc",
+            "dotazione",
+        )
         if str(precedente.get(c)) != str(riga.get(c))
     ]
 
@@ -138,8 +145,10 @@ def main() -> None:
         print("\nPROBLEMI DI VALIDAZIONE")
         for p in problemi:
             print(f"  - {p}")
-        print("\nNon salvo. Correggi il testo della pagina oppure "
-              "inserisci la riga a mano.")
+        print(
+            "\nNon salvo. Correggi il testo della pagina oppure "
+            "inserisci la riga a mano."
+        )
         return
 
     rivedere = da_rivedere(campi)

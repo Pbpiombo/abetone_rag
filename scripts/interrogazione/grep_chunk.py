@@ -7,7 +7,7 @@ from src.vectorstore import apri_store
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python -m scripts.grep_chunk \"stringa da cercare\"")
+        print('Uso: python -m scripts.grep_chunk "stringa da cercare"')
         return
 
     ago = " ".join(sys.argv[1:]).lower()
@@ -23,8 +23,10 @@ def main() -> None:
             inizio = max(0, posizione - 120)
             fine = min(len(compatto), posizione + len(ago) + 120)
 
-            print(f"\n--- {meta.get('ente')} | p. {meta.get('page')} "
-                  f"| chunk {meta.get('chunk_num')} ---")
+            print(
+                f"\n--- {meta.get('ente')} | p. {meta.get('page')} "
+                f"| chunk {meta.get('chunk_num')} ---"
+            )
             print(f"    ...{compatto[inizio:fine]}...")
 
     print(f"\nTrovato in {trovati} chunk su {len(dati['documents'])}.")
