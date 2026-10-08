@@ -1,8 +1,7 @@
 .venv/
 .env
 __pycache__/
-chroma_db/
-data/db/
+data/db/chroma/
 data/raw/
 data/processed/pagina_*.txt
 supabase_conn.py

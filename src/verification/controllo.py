@@ -40,6 +40,7 @@ SCHEMI = {
         rf"\b(\d{{1,2}}\s+(?:{MESI})(?:\s+\d{{4}})?)\b",
         r"\b(\d{1,2}/\d{1,2}/\d{4})\b",
         r"\b(\d{1,2}-\d{1,2}-\d{4})\b",
+        r"\b(\d{1,2}/\d{1,2})(?!/)\b",
     ],
     "codice": [
         r"\b([A-Z]\d{2}[A-Z]\d{10,12})\b",
@@ -56,6 +57,9 @@ SCHEMI = {
     ],
     "anno": [
         r"(?<![\d.,/-])(19\d{2}|20\d{2})(?![\d.,/-])",
+    ],
+    "orario": [
+        r"\bore\s+(\d{1,2}(?:[:.]\d{2})?)",
     ],
     "quantita": [
         r"\b(\d+,\d{1,2})\b",
@@ -74,6 +78,7 @@ class Esito:
     frammenti: list[str]
     stato: str  # verificato | non_trovato | non_citato
     dettaglio: str = ""
+    contesto: str = ""
 
 
 def normalizza(testo: str) -> str:
@@ -160,7 +165,15 @@ def frammenti_citati(posizione: int, citazioni: list[tuple[int, str]]) -> list[s
     if prima - posizione > FINESTRA_CITAZIONE:
         return []
 
-    return [etichetta for pos, etichetta in successive if pos <= prima + 200]
+    etichette = [etichetta for pos, etichetta in successive if pos <= prima + 200]
+    return list(dict.fromkeys(etichette))
+
+
+def contesto_di(testo: str, posizione: int, ampiezza: int = 40) -> str:
+    """Il testo intorno a un dato, per rendere leggibile la riga di verifica."""
+    inizio = max(0, posizione - ampiezza)
+    fine = posizione + ampiezza
+    return " ".join(testo[inizio:fine].split())
 
 
 def verifica(
@@ -187,9 +200,10 @@ def verifica(
 
     for tipo, valore, posizione in trova_dati(mascherata):
         etichette = frammenti_citati(posizione, citazioni)
+        contesto = contesto_di(risposta, posizione)
 
         if not etichette:
-            esiti.append(Esito(tipo, valore, [], "non_citato"))
+            esiti.append(Esito(tipo, valore, [], "non_citato", contesto = contesto))
             continue
 
         ago = normalizza(valore)
@@ -199,7 +213,7 @@ def verifica(
         ]
 
         if dentro:
-            esiti.append(Esito(tipo, valore, dentro, "verificato"))
+            esiti.append(Esito(tipo, valore, dentro, "verificato", contesto = contesto))
         else:
             altrove = [e for e, t in testi.items() if any(v in t for v in varianti)]
             dettaglio = (
@@ -207,7 +221,7 @@ def verifica(
                 if altrove
                 else "non presente in nessuna fonte recuperata"
             )
-            esiti.append(Esito(tipo, valore, etichette, "non_trovato", dettaglio))
+            esiti.append(Esito(tipo, valore, etichette, "non_trovato", dettaglio, contesto))
 
     return esiti
 

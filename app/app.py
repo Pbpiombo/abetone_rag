@@ -1,5 +1,6 @@
 """Interfaccia Streamlit per il sistema RAG territoriale."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -12,8 +13,10 @@ if str(RADICE) not in sys.path:
 import streamlit as st
 
 from src.chains.rag import costruisci_catena
+from src.pgstore import RecuperoPostgres
 from src.database.repertorio import stato_archivio
 from src.verification.controllo import riassumi, verifica
+
 
 st.set_page_config(
     page_title="Assistente territoriale",
@@ -35,9 +38,13 @@ ESEMPI = [
 ]
 
 
+USA_POSTGRES = os.getenv("USA_POSTGRES", "1") == "1"
+
 @st.cache_resource(show_spinner="Costruzione degli indici in corso...")
 def carica_catena():
     """Costruita una volta sola e riusata a ogni interazione."""
+    if USA_POSTGRES:
+        return costruisci_catena(recupero=RecuperoPostgres())
     return costruisci_catena()
 
 
@@ -68,22 +75,34 @@ def mostra_verifica(esito: dict) -> None:
         e for e in esiti if not (e.tipo == "anno" and e.stato == "verificato")
     ]
 
-    for e in da_mostrare:
+    problematici = [e for e in da_mostrare if e.stato != "verificato"]
+    verificati = [e for e in da_mostrare if e.stato == "verificato"]
+
+    for e in problematici:
         riga = f"{SIMBOLI[e.stato]}  **{e.valore}**  ({e.tipo})"
+        if e.contesto:
+            riga += f"  ·  _{e.contesto}_" 
         if e.frammenti:
             riga += f" → fonti {', '.join(e.frammenti)}"
-
         if e.stato == "non_trovato":
             st.markdown(f":red[{riga}]")
             if e.dettaglio:
                 st.caption(f"    {e.dettaglio}")
-        elif e.stato == "non_citato":
-            st.markdown(f":orange[{riga}]")
         else:
-            st.markdown(riga)
+            st.markdown(f":orange[{riga}]")
+
+    if verificati:
+        with st.expander(f"{len(verificati)} dati verificati", expanded=False):
+            for e in verificati:
+                riga = f"{SIMBOLI[e.stato]}  **{e.valore}**  ({e.tipo})"
+                if e.contesto:
+                    riga += f"  ·  _{e.contesto}_"
+                if e.frammenti:
+                    riga += f" → fonti {', '.join(e.frammenti)}"
+                st.markdown(riga)
 
 
-def mostra_fonti(esito: dict) -> None:
+def mostra_fonti(esito: dict) -> None:  
     """I frammenti documentali e i dati numerici usati."""
     dati = esito.get("esiti_dati") or []
     documenti = esito["documenti"]
@@ -123,6 +142,8 @@ def main() -> None:
     )
 
     with st.sidebar:
+        
+        st.caption(f"Vector store: {'Postgres' if USA_POSTGRES else 'Chroma'}")
         st.header("Archivi")
         st.markdown("**Dati numerici**")
         st.code(stato_archivio(), language=None)
@@ -192,3 +213,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

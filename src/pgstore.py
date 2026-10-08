@@ -1,14 +1,15 @@
-import json
 import os
+import psycopg
+import numpy as np
+import json
 import re
 
-import numpy as np
-import psycopg
-from dotenv import load_dotenv
-from langchain_core.documents import Document
+
 from pgvector.psycopg import register_vector
+from dotenv import load_dotenv
 
 from src.vectorstore import crea_embeddings
+from langchain_core.documents import Document
 
 load_dotenv()
 
@@ -42,60 +43,69 @@ def salva_chunk_in_db(documenti: list[Document]) -> None:
 
 
 def a_or_query(domanda: str) -> str:
+    """Trasforma la domanda in una query OR per to_tsquery.
+
+    Estrae solo le sequenze alfanumeriche, così la punteggiatura non rompe
+    to_tsquery, e unisce i termini con OR: l'AND di plainto_tsquery era
+    troppo rigido e su domande in linguaggio naturale non trovava nulla.
+    """
     parole = re.findall(r"\w+", domanda.lower())
     return " | ".join(parole)
 
 
 class RecuperoPostgres:
-    """tiene in memoria l'indice lessicale e interroga entrambi i motori."""
+    """Recupero ibrido su Postgres: densa con pgvector, lessicale con full-text."""
 
     def __init__(self) -> None:
         self.emb = crea_embeddings()
-        self.conn = psycopg.connect(os.getenv("DATABASE_URL"))
-        register_vector(self.conn)
-        self.cursor = self.conn.cursor()
 
     def _densa(self, domanda: str, quanti: int) -> list[Document]:
-        """Restituisce i chunk più simili alla domanda nel database."""
+        """Cerca per similarità semantica, confrontando gli embedding."""
         vettore_domanda = np.array(self.emb.embed_query(domanda))
 
-        self.cursor.execute(
-            """SELECT id,
-                    testo, 
-                    metadata, 
-                    embedding <=> %s AS distanza
-            FROM chunk
-            ORDER BY distanza
-            LIMIT %s""",
-            (vettore_domanda, quanti),
-        )
+        with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
+            register_vector(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                """SELECT id,
+                        testo, 
+                        metadata, 
+                        embedding <=> %s AS distanza
+                FROM chunk
+                ORDER BY distanza
+                LIMIT %s""",
+                (vettore_domanda, quanti),
+            )
 
-        return [
-            Document(page_content=testo, metadata={**metadata, "id": id})
-            for id, testo, metadata, distanza in self.cursor.fetchall()
-        ]
+            return [
+                Document(page_content=testo, metadata={**metadata, "id": id})
+                for id, testo, metadata, distanza in cursor.fetchall()
+            ]
 
     def _lessicale(self, domanda: str, quanti: int) -> list[Document]:
-        """Restituisce i chunk più simili alla domanda nel database."""
+        """Cerca per parole, con il full-text italiano di Postgres."""
 
         query = a_or_query(domanda)
 
-        self.cursor.execute(
-            """SELECT id,
-                    testo, 
-                    metadata, 
-                    ts_rank_cd(to_tsvector('italian', testo), to_tsquery('italian', %s)) AS rank
-            FROM chunk
-            WHERE to_tsvector('italian', testo) @@ to_tsquery('italian', %s)
-            ORDER BY rank DESC
-            LIMIT %s""",
-            (query, query, quanti),
-        )
+        with psycopg.connect(os.getenv("DATABASE_URL")) as conn:
+            register_vector(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                """SELECT id,
+                        testo, 
+                        metadata, 
+                        ts_rank_cd(to_tsvector('italian', testo), to_tsquery('italian', %s)) AS rank
+                        FROM chunk
+                        WHERE to_tsvector('italian', testo) @@ to_tsquery('italian', %s)
+                        ORDER BY rank DESC
+                        LIMIT %s""",
+                (query, query, quanti),
+            )
 
-        return [
-            Document(page_content=testo, metadata={**metadata, "id": id})
-            for id, testo, metadata, rank in self.cursor.fetchall()
-        ]
+            return [
+                Document(page_content=testo, metadata={**metadata, "id": id})
+                for id, testo, metadata, rank in cursor.fetchall()
+            ]
 
     def cerca(
         self, domanda: str, k: int = 8, ampiezza: int = 20
@@ -124,10 +134,6 @@ class RecuperoPostgres:
 
         return [(v["doc"], v["punteggio"], v["origini"]) for v in ordinati[:k]]
 
-    def chiudi(self) -> None:
-        """Chiude la connessione al database."""
-        self.conn.close()
-
 
 if __name__ == "__main__":
     recupero = RecuperoPostgres()
@@ -149,5 +155,3 @@ if __name__ == "__main__":
                 f"  {punteggio:.4f} | {meta.get('ente')} | p. {meta.get('page')} | {', '.join(origini)}"
             )
             print(f"      {doc.page_content[:100].strip()}")
-
-    recupero.chiudi()
