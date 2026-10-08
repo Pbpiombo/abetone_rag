@@ -1,8 +1,10 @@
-# Abetone RAG
+# RAG Bandi Comunali
 
 Assistente per la programmazione territoriale di un piccolo comune montano.
 Trova i bandi a cui l'ente può partecipare, spiega cosa serve per presentare
 domanda, e **cita la fonte di ogni dato che riporta**.
+
+**[Prova la demo online](https://rag-bandi-comunali-yxhfmuxc5k4cg96rnxeeka.streamlit.app/)**
 
 Caso di studio: Comune di Abetone Cutigliano (1.834 abitanti, area interna
 Garfagnana - Lunigiana - Media Valle del Serchio - Appennino Pistoiese).
@@ -52,9 +54,9 @@ presenterebbe come corretto. Una query SQL o restituisce il valore esatto o non
 restituisce niente.
 
 Il recupero documentale è **ibrido**: somiglianza semantica (embedding
-multilingua, in locale) unita a corrispondenza lessicale esatta, con fusione
-RRF. Serve perché la ricerca densa non sa agganciare codici e riferimenti
-normativi come `41/2022` o un CUP.
+multilingua, calcolati in locale) unita a corrispondenza lessicale esatta, con
+fusione RRF. Serve perché la ricerca densa non sa agganciare codici e
+riferimenti normativi come `41/2022` o un CUP.
 
 ### Due implementazioni del recupero
 
@@ -67,10 +69,12 @@ interfaccia:
 | Ricerca lessicale | BM25 in memoria | full-text italiano di Postgres |
 | Dove gira | in locale | Postgres gestito (Supabase) |
 
-`costruisci_catena()` usa Chroma per impostazione predefinita; passando
-`recupero=RecuperoPostgres()` si ottiene la versione su Postgres senza toccare
-nient'altro della catena. Le risposte delle due versioni sono state confrontate
-sulle stesse domande e coincidono nei dati citati.
+La scelta si fa con la variabile d'ambiente `USA_POSTGRES`. La catena riceve
+l'oggetto di recupero come parametro e non sa quale dei due stia usando: chiede
+`recupero.cerca(domanda, k=k)` e riceve una lista di tuple.
+
+Le risposte delle due versioni sono state confrontate sulle stesse domande e
+coincidono nei dati citati.
 
 ---
 
@@ -79,14 +83,15 @@ sulle stesse domande e coincidono nei dati citati.
 Serve Python 3.10 o superiore.
 
 ```bash
-git clone https://github.com/<utente>/abetone-rag.git
-cd abetone-rag
+git clone https://github.com/Pbpiombo/rag-bandi-comunali.git
+cd rag-bandi-comunali
 
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1      # Windows
 source .venv/bin/activate         # macOS e Linux
 
 pip install -r requirements.txt
+pip install -r requirements-dev.txt   # ruff, opzionale
 ```
 
 Crea un file `.env` nella radice:
@@ -94,25 +99,26 @@ Crea un file `.env` nella radice:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 MODEL_NAME=claude-sonnet-5
-DATABASE_URL=postgresql://postgres.<progetto>:<password>@<host>.pooler.supabase.com:5432/postgres
+USA_POSTGRES=1
+DATABASE_URL=postgresql://utente:password@host:5432/postgres
 ```
 
 La chiave API si ottiene su [console.anthropic.com](https://console.anthropic.com).
 Conviene impostare un limite di spesa nella sezione Billing.
 
-`DATABASE_URL` serve solo per la versione su Postgres: con Chroma si può
-omettere.
+`DATABASE_URL` serve solo con `USA_POSTGRES=1`; con `USA_POSTGRES=0` il sistema
+usa Chroma in locale e la variabile si può omettere.
 
-Crea le cartelle dei dati, che non sono nel repository:
+Crea le cartelle dei dati non versionate:
 
 ```bash
 mkdir -p data/raw data/db
 ```
 
-### Postgres con pgvector (opzionale)
+### Postgres con pgvector
 
-Serve un Postgres raggiungibile con l'estensione `vector` attiva. La via più
-breve è un progetto su [Supabase](https://supabase.com), dove l'estensione è già
+Serve un Postgres con l'estensione `vector` attiva. La via più breve è un
+progetto su [Supabase](https://supabase.com), dove l'estensione è già
 disponibile.
 
 Nell'editor SQL del pannello:
@@ -133,7 +139,12 @@ CREATE INDEX ON chunk USING hnsw (embedding vector_cosine_ops);
 ```
 
 Il `384` è la dimensione dei vettori prodotti dal modello di embedding
-configurato: cambiando modello va cambiata anche qui, e l'indice va ricostruito.
+configurato in `src/config.py`. Cambiando modello va cambiata anche qui, e
+l'indice va ricostruito. Per verificarla:
+`len(crea_embeddings().embed_query("test"))`.
+
+`vector_cosine_ops` deve corrispondere all'operatore usato nelle query (`<=>`,
+distanza coseno): se non corrispondono l'indice esiste ma non viene mai usato.
 
 Nota sulla stringa di connessione: su reti senza IPv6 la connessione diretta
 `db.<progetto>.supabase.co` non si risolve. Va usata quella del **connection
@@ -172,7 +183,7 @@ python -m scripts.ingestione.ingest_tutti       # estrae, pulisce, divide, indic
 ```
 
 L'ingestione scrive su entrambi i vector store. Il primo avvio scarica il
-modello di embedding (circa mezzo giga) e lo tiene in cache.
+modello di embedding e lo tiene in cache.
 
 Reindicizzando, Chroma sovrascrive i chunk esistenti perché usa identificativi
 deterministici; la tabella `chunk` su Postgres no, perché gli id sono generati
@@ -216,8 +227,9 @@ python -m scripts.tutorial.step3_verifica "Quali bandi sono aperti per il Comune
 streamlit run app/app.py
 ```
 
-L'interfaccia mostra la risposta, il pannello di verifica dei dati citati, e le
-fonti navigabili: cliccando su un frammento se ne legge il testo originale.
+L'interfaccia mostra la risposta, il pannello di verifica dei dati citati con il
+contesto di ciascuno, e le fonti navigabili: cliccando su un frammento se ne
+legge il testo originale.
 
 ### Confrontare i due recuperi
 
@@ -264,7 +276,7 @@ app/                       interfaccia Streamlit
 data/
 ├── raw/                   PDF originali (non versionati)
 ├── processed/             CSV dei dati strutturati
-└── db/                    Chroma e SQLite (non versionati)
+└── db/                    SQLite versionato, indice Chroma escluso
 ```
 
 In `src/` la logica riusabile, in `scripts/` i punti da cui viene lanciata.
@@ -281,6 +293,11 @@ recuperati, al momento di generare la risposta.
 chiuso di interrogazioni parametriche, scritte e verificate a mano. Una query
 generata liberamente può essere sbagliata in modi difficili da accorgersene, e
 produrrebbe un numero plausibile e falso.
+
+**Niente agent.** Il percorso è fisso: il router decide una volta, il codice
+esegue, il modello genera. Un agent sceglierebbe le azioni in un ciclo, con un
+numero di passi imprevedibile. Qui la tracciabilità viene prima della
+flessibilità: si sa sempre cosa è stato consultato e perché.
 
 **Lo stato di un bando si calcola, non si memorizza.** Un campo "aperto/chiuso"
 sarebbe vecchio il giorno dopo. Nella scansione iniziale, **84 bandi su 136**
@@ -311,9 +328,9 @@ Vale la pena elencarli con la stessa precisione di ciò che il sistema fa.
 
 - **Non garantisce la completezza.** Il verificatore controlla che i dati citati
   esistano nella fonte; non può sapere cosa è stato omesso.
-- **Il verificatore controlla quantità e riferimenti normativi.** Una risposta
-  fatta di soli nomi propri passa senza rilievi, perché non contiene nulla di
-  misurabile.
+- **Il verificatore controlla quantità, date e riferimenti normativi.** Una
+  risposta fatta di soli nomi propri passa senza rilievi, perché non contiene
+  nulla di misurabile.
 - **Non sa quali documenti dovrebbe avere.** Risponde solo su ciò che è in
   archivio, e lo dichiara quando non basta.
 - **L'estrazione è assistita.** I campi critici richiedono lettura umana delle
@@ -326,6 +343,8 @@ Vale la pena elencarli con la stessa precisione di ciò che il sistema fa.
   qualcosa, ma può promuovere un frammento che ripete un termine comune senza
   essere pertinente. BM25 pesa i termini per rarità e su questo si comporta
   meglio.
+- **Nessuna memoria conversazionale.** Ogni domanda è indipendente: un seguito
+  come "e quanto possono chiedere?" non eredita il soggetto da quella prima.
 
 ## Stato
 
