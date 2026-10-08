@@ -203,11 +203,12 @@ def main() -> None:
     with sinistra:
         st.markdown("#### Risposta")
         st.markdown(esito["risposta"])
-
-    with destra:
+        st.divider()
         st.markdown("#### Verifica")
         mostra_verifica(esito)
-        st.divider()
+
+    with destra:
+        st.markdown("#### Fonti")
         mostra_fonti(esito)
 
 
